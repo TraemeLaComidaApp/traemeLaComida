@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import './MapaEditor.css';
 import { getSalasConMesas, guardarPlanoCompleto } from '../services/apiMap';
+import { generateUuid } from '../utils/uuid';
+
+/**
+ * Builds the QR code image URL that encodes the full client access link.
+ * Uses the current app origin so it works in both dev and production.
+ */
+const getQrUrl = (uuid) =>
+    `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(`${window.location.origin}/mesa/${uuid}`)}`;
 
 const MapaEditor = () => {
     const [salas, setSalas] = useState([{ id: Date.now(), nombre: 'Salón Principal', elementos: [], anchoSala: 800, altoSala: 500 }]);
@@ -46,11 +54,8 @@ const MapaEditor = () => {
             if (!num) return;
         }
 
-        const prefijo = tipo === 'barra' ? 'barra' : 'mesa';
         const anchoFijo = tipo === 'barra' ? 120 : 60;
         const altoFijo = tipo === 'barra' ? 40 : 60;
-
-        const uniqueId = Math.random().toString(36).substring(2, 9);
         const nuevo = {
             id: Date.now(), // Cuando lo guardes en DB, la DB le asignará su ID real
             tipo: tipo, // Enum: 'mesa' o 'barra'
@@ -60,8 +65,7 @@ const MapaEditor = () => {
             ancho: anchoFijo,
             alto: altoFijo,
             rotacion: 0,
-            uid: uniqueId,
-            uuid: `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${prefijo}_${num}_${uniqueId}`
+            uuid: generateUuid()
         };
 
         actualizarSalaConfig({ elementos: [...salaActiva.elementos, nuevo] });
@@ -234,7 +238,7 @@ const MapaEditor = () => {
                     <div className="inventory-list">
                         {salaActiva.elementos.map(el => (
                             <div key={el.id} className="inventory-item">
-                                <img src={el.uuid} onClick={() => setQrZoom(el)} alt="qr" />
+                                <img src={getQrUrl(el.uuid)} onClick={() => setQrZoom(el)} alt="qr" />
                                 <div className="inventory-details">
                                     <input
                                         type="text"
@@ -243,13 +247,9 @@ const MapaEditor = () => {
                                             const nuevoNum = e.target.value;
                                             const yaExiste = salaActiva.elementos.some(item => String(item.numero) === String(nuevoNum) && item.id !== el.id);
 
-                                            const pref = el.tipo === 'barra' ? 'barra' : 'mesa';
-                                            const currentUid = el.uid || Math.random().toString(36).substring(2, 9);
-
                                             actualizarElemento(el.id, {
                                                 numero: nuevoNum,
-                                                uid: currentUid,
-                                                uuid: `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${pref}_${nuevoNum}_${currentUid}`,
+                                                uuid: generateUuid(),
                                                 error_duplicado: yaExiste // Opcional: para marcarlo visualmente
                                             });
                                         }}
@@ -268,9 +268,12 @@ const MapaEditor = () => {
                 <div className="qr-modal-overlay" onClick={() => setQrZoom(null)}>
                     <div className="qr-modal-content" onClick={e => e.stopPropagation()}>
                         <h2>{qrZoom.tipo === 'barra' ? 'Barra' : 'Mesa'} #{qrZoom.numero}</h2>
-                        <img src={qrZoom.uuid} alt="qr" />
+                        <p style={{ fontSize: '11px', color: '#64748b', wordBreak: 'break-all', margin: '0 0 12px' }}>
+                            {window.location.origin}/mesa/{qrZoom.uuid}
+                        </p>
+                        <img src={getQrUrl(qrZoom.uuid)} alt="qr" />
                         <div className="qr-actions">
-                            <a href={qrZoom.uuid} download={`QR_${qrZoom.tipo}_${qrZoom.numero}.png`} className="btn-download">Descargar</a>
+                            <a href={getQrUrl(qrZoom.uuid)} download={`QR_${qrZoom.tipo}_${qrZoom.numero}.png`} className="btn-download">Descargar</a>
                             <button onClick={() => setQrZoom(null)} className="btn-close">Cerrar</button>
                         </div>
                     </div>

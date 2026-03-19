@@ -1,9 +1,16 @@
 import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import './VistaCliente.css';
 import { getMenuCliente } from '../services/apiMenuManager';
-import { submitOrder } from '../services/apiCliente';
+import { submitOrder, getMesaByUuid } from '../services/apiCliente';
 
 const VistaCliente = () => {
+    const { uuid } = useParams();
+
+    // --- RESOLUCIÓN DE MESA POR UUID ---
+    const [mesa, setMesa] = useState(null);         // { id, numero, ... }
+    const [mesaError, setMesaError] = useState(false); // QR caducado o inválido
+
     // --- 1. ESTADOS PRINCIPALES ---
     const [seccionActiva, setSeccionActiva] = useState('menu');
     const [filtroActivo, setFiltroActivo] = useState('Todo');
@@ -30,7 +37,20 @@ const VistaCliente = () => {
     const [estadoVoz, setEstadoVoz] = useState(null);
     const [mensajeVoz, setMensajeVoz] = useState("");
 
-    // --- 2. LLAMADA A LA BASE DE DATOS (FETCH) ---
+    // --- 2A. RESOLUCIÓN DE MESA ---
+    useEffect(() => {
+        const resolveMesa = async () => {
+            try {
+                const data = await getMesaByUuid(uuid);
+                setMesa(data);
+            } catch {
+                setMesaError(true);
+            }
+        };
+        if (uuid) resolveMesa();
+    }, [uuid]);
+
+    // --- 2B. LLAMADA A LA BASE DE DATOS (FETCH) ---
     useEffect(() => {
         const fetchMenu = async () => {
             const dataMenu = await getMenuCliente();
@@ -131,17 +151,21 @@ const VistaCliente = () => {
     const enviarACocina = async () => {
         const itemsPorEnviar = carrito.filter(item => !item.enviado);
         if (itemsPorEnviar.length === 0) return;
-        
+
+        if (!mesa) {
+            alert('No se puede enviar el pedido: la mesa no ha sido identificada.');
+            return;
+        }
+
         try {
-            // Asumimos mesaId = 1 por defecto (al ser una demo)
-            await submitOrder(1, false, null, itemsPorEnviar);
-            
+            await submitOrder(mesa.id, false, null, itemsPorEnviar);
+
             const carritoEnviado = carrito.map(item => ({ ...item, enviado: true }));
             setCarrito(carritoEnviado);
-            alert("¡Pedido enviado a cocina!");
+            alert('¡Pedido enviado a cocina!');
         } catch (error) {
-            console.error("Error al enviar pedido:", error);
-            alert("Hubo un error enviando tu pedido a cocina.");
+            console.error('Error al enviar pedido:', error);
+            alert('Hubo un error enviando tu pedido a cocina.');
         }
     };
 
@@ -262,6 +286,21 @@ const VistaCliente = () => {
     const totalEsperandoMesa = carrito.filter(item => item.estadoPago === 'solicitado_mesa').reduce((acc, item) => acc + item.precioFinal, 0);
     const totalPagoSeleccionado = itemsSeleccionadosPago.reduce((acc, i) => acc + carrito[i].precioFinal, 0);
     const todosPagados = carrito.length > 0 && carrito.every(item => item.estadoPago === 'pagado');
+
+    // --- QR CADUCADO / MESA NO ENCONTRADA ---
+    if (mesaError) {
+        return (
+            <div className="vista-cliente-wrapper" style={{ alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: '64px', color: '#ef4444' }}>qr_code_scanner</span>
+                    <h2 style={{ color: '#1e293b', marginTop: '16px' }}>QR no válido</h2>
+                    <p style={{ color: '#64748b', maxWidth: '280px', margin: '8px auto 0' }}>
+                        Este código QR ha caducado o no existe. Por favor, escanea el QR que hay sobre tu mesa.
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
     // --- PANTALLA DE CARGA (Mientras espera a la base de datos) ---
     if (cargandoMenu) {

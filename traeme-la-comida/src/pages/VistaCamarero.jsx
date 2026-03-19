@@ -116,7 +116,7 @@ export default function VistaCamarero() {
     const cobrarYCerrarMesaLocal = async (mesa) => {
         const total = mesa.pedido.reduce((t, i) => t + (i.precio * i.cantidad), 0);
         try {
-            await cobrarYFinalizarMesa(mesa.sesionId, mesa.pedidoId, total, 'Efectivo'); // Asumimos efectivo por defecto
+            await cobrarYFinalizarMesa(mesa.sesionId, mesa.pedidoId, mesa.id, total, 'Efectivo'); // Asumimos efectivo por defecto
             setMesaSeleccionada(null);
         } catch (error) {
             console.error(error);

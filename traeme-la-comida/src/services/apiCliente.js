@@ -1,5 +1,13 @@
 import { fetchApi } from './apiClient';
 
+/**
+ * Resolve a mesa by its UUID. Used so the client view can identify
+ * which physical table it is based on the UUID in the URL (from the QR code).
+ */
+export const getMesaByUuid = async (uuid) => {
+    return await fetchApi(`/mesa/por-uuid/${uuid}`);
+};
+
 export const submitOrder = async (mesaId, esBarra, numeroPedidoBarra, carrito, callbackExit) => {
     let currentSesionId = null;
 

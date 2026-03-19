@@ -21,6 +21,12 @@ export class MesaController {
     return this.service.findAll();
   }
 
+  @Get('por-uuid/:uuid')
+  @ApiOperation({ summary: 'Obtener una mesa por su UUID (para QR dinámico)' })
+  findByUuid(@Param('uuid') uuid: string) {
+    return this.service.findByUuid(uuid);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Obtener un registro en Mesa por su id' })
   findOne(@Param('id') id: string) {

@@ -1,4 +1,5 @@
 import { fetchApi } from './apiClient';
+import { generateUuid } from '../utils/uuid';
 
 export const añadirAComanda = async (mesaId, sesionId, pedidoId, producto) => {
     let currentSesionId = sesionId;
@@ -61,7 +62,7 @@ export const solicitarCobro = async (sesionId) => {
     });
 };
 
-export const cobrarYFinalizarMesa = async (sesionId, pedidoId, totalCalculado, metodoPago) => {
+export const cobrarYFinalizarMesa = async (sesionId, pedidoId, mesaId, totalCalculado, metodoPago) => {
     await fetchApi('/pago', {
         method: 'POST',
         body: JSON.stringify({
@@ -81,6 +82,12 @@ export const cobrarYFinalizarMesa = async (sesionId, pedidoId, totalCalculado, m
     await fetchApi(`/sesion/${sesionId}`, {
         method: 'PATCH',
         body: JSON.stringify({ estado: 'Cerrada', fecha_fin: new Date().toISOString() })
+    });
+
+    // Regenerate UUID so the table's QR link is invalidated after payment
+    await fetchApi(`/mesa/${mesaId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ uuid: generateUuid() })
     });
 };
 

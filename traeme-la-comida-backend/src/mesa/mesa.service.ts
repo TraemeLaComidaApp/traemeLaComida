@@ -41,6 +41,18 @@ export class MesaService {
     return data;
   }
 
+  async findByUuid(uuid: string) {
+    const { data, error } = await this.supabaseService.getClient()
+      .from(this.tableName)
+      .select('*')
+      .eq('uuid', uuid)
+      .single();
+
+    if (error) throw error;
+    if (!data) throw new NotFoundException('Mesa no encontrada o QR caducado');
+    return data;
+  }
+
   async update(id: number, updateDto: UpdateMesaDto) {
     const { data, error } = await this.supabaseService.getClient()
       .from(this.tableName)
