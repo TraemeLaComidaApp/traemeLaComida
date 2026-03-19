@@ -1,0 +1,338 @@
+.mapa-editor-main {
+    padding: 20px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+/* Pestañas */
+.mapa-editor-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 15px;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+}
+
+.tab-btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    background-color: #e2e8f0;
+    color: #64748b;
+    font-weight: bold;
+    transition: 0.2s;
+}
+
+.tab-btn.active {
+    background-color: #ec9213;
+    color: #fff;
+}
+
+.tab-btn-add {
+    border: none;
+    background: none;
+    color: #ec9213;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+/* Barra de Herramientas */
+.mapa-editor-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #fff;
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.toolbar-group {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.toolbar-actions {
+    display: flex;
+    gap: 8px;
+    margin-left: 15px;
+    padding-left: 15px;
+    border-left: 2px solid #eee;
+}
+
+.toolbar-settings {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    font-size: 13px;
+    flex-wrap: wrap;
+}
+
+.btnTool {
+    padding: 8px 12px;
+    cursor: pointer;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.btn-rotate {
+    background: #1e293b;
+    color: #fff;
+    border-color: #1e293b;
+}
+
+.btn-delete {
+    background: #fee2e2;
+    color: #ef4444;
+    border-color: #fecaca;
+}
+
+.btn-save {
+    background: #ec9213;
+    color: #fff;
+    border: none;
+}
+
+.btn-rename {
+    border: none;
+    background: #f1f5f9;
+    padding: 5px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.canvas-size input {
+    width: 55px;
+    margin: 0 5px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 2px 5px;
+}
+
+/* Área de Trabajo (Canvas + Sidebar) */
+.editor-layout {
+    display: flex;
+    gap: 20px;
+    height: 65vh;
+    min-height: 400px;
+}
+
+.canvas-area {
+    flex: 1;
+    overflow: auto;
+    background-color: #f8fafc;
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+}
+
+.grid-canvas {
+    background-color: #fff;
+    position: relative;
+    border: 2px solid #ec9213;
+    background-image: radial-gradient(#e2e8f0 1px, transparent 1px);
+    background-size: 20px 20px;
+    touch-action: none;
+}
+
+/* Barra lateral Inventario */
+.editor-sidebar {
+    width: 300px;
+    background-color: #fff;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    padding: 15px;
+    overflow-y: auto;
+    flex-shrink: 0;
+}
+
+.editor-sidebar h3 {
+    font-size: 15px;
+    margin-top: 0;
+    margin-bottom: 15px;
+}
+
+.inventory-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.inventory-item img {
+    width: 30px;
+    cursor: zoom-in;
+    border-radius: 4px;
+}
+
+.inventory-details {
+    flex: 1;
+}
+
+.inventory-details input {
+    width: 100%;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 2px 5px;
+    font-size: 12px;
+    font-weight: bold;
+    box-sizing: border-box;
+}
+
+.inventory-details span {
+    font-size: 9px;
+    color: #999;
+}
+
+/* Modal QR */
+.qr-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+.qr-modal-content {
+    background-color: #fff;
+    padding: 25px;
+    border-radius: 15px;
+    text-align: center;
+}
+
+.qr-modal-content img {
+    width: 250px;
+    margin-bottom: 20px;
+}
+
+.qr-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.btn-download {
+    text-decoration: none;
+    background: #ec9213;
+    color: #fff;
+    padding: 8px 15px;
+    border-radius: 6px;
+    font-weight: bold;
+}
+
+.btn-close {
+    padding: 8px 15px;
+    border: none;
+    background: #eee;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+/* =========================================================
+   MEDIA QUERIES - MÓVILES Y TABLETS
+========================================================= */
+/* Estado Vacío */
+.mapa-editor-empty-state {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 60vh;
+    background-color: #f8fafc;
+    border-radius: 12px;
+    border: 2px dashed #cbd5e1;
+    text-align: center;
+}
+
+.empty-message {
+    max-width: 400px;
+    padding: 40px;
+    color: #64748b;
+}
+
+.empty-message .material-symbols-outlined {
+    font-size: 64px;
+    color: #cbd5e1;
+    margin-bottom: 20px;
+}
+
+.empty-message h3 {
+    margin-bottom: 10px;
+    color: #1e293b;
+}
+
+.empty-message p {
+    font-size: 14px;
+    margin-bottom: 25px;
+}
+
+.btn-create-first {
+    background-color: #ec9213;
+    color: #fff;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 15px;
+    transition: 0.2s;
+}
+
+.btn-create-first:hover {
+    background-color: #d88110;
+    transform: translateY(-2px);
+}
+
+@media (max-width: 768px) {
+    .mapa-editor-main {
+        padding: 10px;
+    }
+
+    .editor-layout {
+        flex-direction: column;
+        height: auto;
+    }
+
+    .canvas-area {
+        height: 50vh;
+    }
+
+    .editor-sidebar {
+        width: 100%;
+        height: 35vh;
+    }
+
+    .mapa-editor-toolbar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .toolbar-actions {
+        margin-left: 0;
+        padding-left: 0;
+        border-left: none;
+        width: 100%;
+        margin-top: 10px;
+    }
+}

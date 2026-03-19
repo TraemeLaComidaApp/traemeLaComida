@@ -1,0 +1,555 @@
+.vista-camarero {
+    display: flex;
+    height: 100vh;
+    background-color: #f8fafc;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    overflow: hidden;
+    /* Evita scrolls dobles feos */
+}
+
+.mapa-container {
+    flex: 1;
+    position: relative;
+    margin: 20px;
+    background: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    overflow: auto;
+    /* Permite scroll del mapa en móviles */
+}
+
+/* Forzamos un área mínima para que las mesas con X e Y absolutos no se recorten en móviles */
+.mapa-scroll-area {
+    position: relative;
+    min-width: 450px;
+    min-height: 400px;
+    width: 100%;
+    height: 100%;
+}
+
+.mesa-item {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 15px;
+    cursor: pointer;
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #1e293b;
+    transition: transform 0.2s ease;
+}
+
+.mesa-item:hover {
+    transform: scale(1.05);
+}
+
+/* UNIFICACIÓN DE .panel-detalle */
+.panel-detalle {
+    width: 400px;
+    background: white;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.05);
+    border-left: 1px solid #e2e8f0;
+    box-sizing: border-box;
+    /* Fundamental para responsive */
+    overflow-y: auto;
+    /* Scroll dentro del propio panel si hay muchos items */
+}
+
+.badge-estado {
+    background: #f1f5f9;
+    padding: 5px 15px;
+    border-radius: 30px;
+    font-size: 14px;
+    color: #475569;
+    margin-top: 10px;
+    display: inline-block;
+}
+
+/* COMANDA - LETRAS GRANDES */
+.lista-comanda {
+    flex: 1;
+    /* Empuja el footer hacia abajo */
+    overflow-y: auto;
+    margin-top: 20px;
+}
+
+.comanda-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.info-prod {
+    display: flex;
+    gap: 15px;
+    font-size: 1.2rem;
+    font-weight: 500;
+}
+
+.cant {
+    font-weight: 800;
+    color: #3b82f6;
+}
+
+.nom {
+    color: #1e293b;
+}
+
+.precio-del {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.subtotal {
+    font-size: 1.1rem;
+    font-weight: bold;
+}
+
+.btn-del-x {
+    background: transparent;
+    border: none;
+    color: #ef4444;
+    font-size: 1.2rem;
+    cursor: pointer;
+    margin-left: 10px;
+    font-weight: bold;
+}
+
+.btn-del-x:hover {
+    transform: scale(1.2);
+}
+
+.total-box {
+    display: flex;
+    justify-content: space-between;
+    font-size: 1.5rem;
+    font-weight: 900;
+    padding: 15px 0 25px 0;
+    color: #0f172a;
+}
+
+.btn-accion {
+    width: 100%;
+    padding: 20px;
+    border-radius: 15px;
+    border: none;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-bottom: 10px;
+}
+
+.btn-barra {
+    background: #2563eb;
+    color: white;
+}
+
+.btn-servir {
+    background: #eab308;
+    color: white;
+}
+
+.btn-cobrar {
+    background: #ef4444;
+    color: white;
+}
+
+.añadir-productos select {
+    width: 100%;
+    padding: 15px;
+    font-size: 16px;
+    border-radius: 10px;
+    border: 2px solid #e2e8f0;
+    margin-top: 20px;
+}
+
+.btn-close-panel {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #f1f1f1;
+    border: none;
+    font-size: 20px;
+    padding: 5px 10px;
+    cursor: pointer;
+    border-radius: 4px;
+    z-index: 10;
+}
+
+.btn-close-panel:hover {
+    background: #e1e1e1;
+}
+
+/* =========================================================
+   MEDIA QUERIES - MAGIA PARA MÓVILES Y TABLETS PEQUEÑAS
+========================================================= */
+@media (max-width: 768px) {
+    .vista-camarero {
+        flex-direction: column;
+    }
+
+    .mapa-container {
+        margin: 10px;
+        border-radius: 15px;
+    }
+
+    /* El panel se convierte en una pantalla modal superpuesta */
+    .panel-detalle {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1000;
+        border-left: none;
+        border-radius: 0;
+        padding: 20px;
+    }
+}
+
+/* =========================================================
+   NUEVOS ESTILOS: BADGES Y ESTADOS DE COMANDA
+========================================================= */
+
+/* Chivatos flotantes en las esquinas de las mesas */
+.badge-notificacion {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    z-index: 10;
+}
+
+.badge-rojo {
+    background-color: #ef4444;
+    border: 2px solid white;
+    color: white;
+}
+
+.badge-amarillo {
+    background-color: #fef08a;
+    border: 2px solid #eab308;
+}
+
+.blink-border {
+    animation: blinkBorder 1.5s infinite;
+}
+
+@keyframes blinkBorder {
+    0% {
+        border-color: #ef4444;
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+    }
+
+    50% {
+        border-color: #fca5a5;
+        box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+    }
+
+    100% {
+        border-color: #ef4444;
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    }
+}
+
+/* Alerta grande de cobro en el panel */
+.alerta-cobro {
+    background-color: #fef2f2;
+    color: #ef4444;
+    padding: 10px 15px;
+    border-radius: 8px;
+    font-weight: 800;
+    margin-top: 10px;
+    border: 1px solid #fca5a5;
+    text-align: center;
+}
+
+/* Tags de estado dentro de la lista de productos */
+.tag-listo {
+    background-color: #fef08a;
+    color: #854d0e;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
+.tag-prep {
+    background-color: #f1f5f9;
+    color: #64748b;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
+/* Oscurecemos un poco los productos que ya están servidos para dar foco a lo pendiente */
+.estado-servido {
+    opacity: 0.5;
+}
+
+/* Etiqueta de número de pedido para la barra */
+.badge-pedido {
+    background-color: #1e293b;
+    color: white;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 900;
+    margin-right: 10px;
+    letter-spacing: 0.5px;
+}
+
+/* Botón individual para entregar platos en la barra */
+.btn-servir-ind {
+    background-color: #eab308;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+    margin-right: 10px;
+    transition: background-color 0.2s;
+}
+
+.btn-servir-ind:hover {
+    background-color: #ca8a04;
+}
+
+/* =========================================================
+   NUEVOS ESTILOS: LAYOUT IZQUIERDO Y PESTAÑAS DE SALAS
+========================================================= */
+
+.layout-izquierdo {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    /* Mantiene el scroll bloqueado dentro del mapa */
+    background-color: #f8fafc;
+}
+
+.tabs-salas {
+    display: flex;
+    gap: 8px;
+    padding: 20px 20px 0 20px;
+}
+
+.tab-sala {
+    padding: 12px 24px;
+    border: none;
+    background-color: #e2e8f0;
+    border-radius: 12px 12px 0 0;
+    font-size: 16px;
+    font-weight: 800;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.tab-sala:hover {
+    background-color: #cbd5e1;
+}
+
+.tab-sala.active {
+    background-color: #ffffff;
+    color: #1e293b;
+    box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.03);
+    z-index: 2;
+}
+
+.mapa-container {
+    margin: 0 20px 20px 20px;
+    border-top-left-radius: 0;
+    /* Para que parezca que se conecta con la primera pestaña */
+    z-index: 1;
+}
+
+/* Puntitos de notificación en las pestañas */
+.sala-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.sala-dot.dot-rojo {
+    background-color: #ef4444;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+}
+
+.sala-dot.dot-amarillo {
+    background-color: #eab308;
+}
+
+/* =========================================================
+   ESTILOS PARA LA PANTALLA DE LOGIN (CAMARERO) Y LAYOUT
+========================================================= */
+
+.camarero-login-container {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #e2e8f0;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.camarero-login-box {
+    background: #ffffff;
+    width: 100%;
+    max-width: 380px;
+    padding: 35px;
+    border-radius: 16px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    box-sizing: border-box;
+}
+
+.camarero-login-header {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.camarero-login-header .login-icon {
+    font-size: 42px;
+    color: #2563eb;
+    background: #eff6ff;
+    padding: 15px;
+    border-radius: 50%;
+    margin-bottom: 15px;
+}
+
+.camarero-login-header h2 {
+    margin: 0 0 5px 0;
+    color: #1e293b;
+    font-weight: 800;
+    font-size: 20px;
+}
+
+.camarero-login-header p {
+    margin: 0;
+    color: #64748b;
+    font-size: 13px;
+}
+
+.camarero-login-form .form-group {
+    margin-bottom: 15px;
+}
+
+.camarero-login-form label {
+    display: block;
+    font-size: 12px;
+    font-weight: 800;
+    color: #475569;
+    margin-bottom: 5px;
+}
+
+.camarero-login-form input {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #0f172a;
+    box-sizing: border-box;
+    transition: 0.2s;
+    text-align: center;
+}
+
+.camarero-login-form input:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.camarero-login-error {
+    background-color: #fef2f2;
+    color: #ef4444;
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 15px;
+    border: 1px solid #fca5a5;
+}
+
+.camarero-btn-login {
+    width: 100%;
+    padding: 14px;
+    background-color: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.camarero-btn-login:active {
+    background-color: #1d4ed8;
+    transform: scale(0.98);
+}
+
+/* --- Ajuste para integrar el botón de Logout en la cabecera del mapa --- */
+.camarero-header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    /* Alinea el botón con la base de las pestañas */
+    padding-right: 20px;
+}
+
+.btn-logout-camarero {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    color: #ef4444;
+    padding: 8px 15px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 15px;
+    /* Para alinearlo con las pestañas */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+    transition: 0.2s;
+}
+
+.btn-logout-camarero:hover {
+    background: #fef2f2;
+    border-color: #fca5a5;
+}
+
+.btn-logout-camarero span {
+    font-size: 16px;
+}

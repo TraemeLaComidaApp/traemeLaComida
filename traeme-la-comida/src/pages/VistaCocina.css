@@ -1,0 +1,693 @@
+/* --- VARIABLES DE COLOR (Tema KDS) --- */
+:root {
+    /* Colores de estado más suaves y mates que no cansan la vista */
+    --kds-primary: #34d399;
+    /* Verde esmeralda/menta. Claro pero no fosforito */
+    --kds-danger: #ef4444;
+    /* Rojo alerta estándar, no hiere la vista */
+    --kds-caution: #fbbf24;
+    /* Amarillo ámbar cálido */
+
+    /* Fondos oscuros pero no "negro puro" (ayuda a relajar el ojo) */
+    --kds-bg: #0f172a;
+    /* Azul noche profundísimo (casi negro) */
+    --kds-panel: #1e293b;
+    /* Gris oscuro azulado para las tarjetas */
+
+    /* Textos y bordes */
+    --kds-white: #f8fafc;
+    /* Blanco roto, menos agresivo que el blanco puro */
+    --kds-border: #000000;
+    /* Bordes negros para dar profundidad */
+}
+
+/* --- CONTENEDOR PRINCIPAL --- */
+.vcoc-screen {
+    background-color: var(--kds-bg);
+    color: var(--kds-white);
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    /* Evita scrolls dobles feos */
+    font-family: 'Inter', sans-serif;
+    box-sizing: border-box;
+}
+
+/* --- HEADER PRINCIPAL --- */
+.vcoc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 40px;
+    background-color: var(--kds-panel);
+    border-bottom: 3px solid var(--kds-border);
+    flex-shrink: 0;
+}
+
+.vcoc-header-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.icon-logo {
+    color: var(--kds-primary);
+    font-size: 35px;
+}
+
+.vcoc-header-left h1 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: -1px;
+    color: var(--kds-white);
+}
+
+.vcoc-header-left h1 span {
+    color: var(--kds-primary);
+}
+
+.vcoc-station {
+    color: var(--kds-primary);
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    opacity: 0.7;
+}
+
+.vcoc-header-right {
+    display: flex;
+    gap: 20px;
+}
+
+.vcoc-stats {
+    text-align: right;
+    border-right: 1px solid #333;
+    padding-right: 20px;
+}
+
+.stats-label,
+.sync-label {
+    font-size: 10px;
+    color: #555;
+}
+
+.sync-label {
+    color: var(--kds-primary);
+}
+
+.stats-value {
+    font-size: 18px;
+    font-weight: 800;
+}
+
+.stats-value.caution {
+    color: var(--kds-caution);
+}
+
+.vcoc-sync {
+    text-align: center;
+    background-color: #000;
+    padding: 5px 20px;
+    border: 1px solid #222;
+}
+
+.sync-value {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--kds-primary);
+}
+
+/* --- MAIN LAYOUT --- */
+.vcoc-main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* --- AREA CENTRAL DE PEDIDOS --- */
+.vcoc-contentArea {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background-color: #050505;
+    overflow: hidden;
+}
+
+.vcoc-contentHeader {
+    padding: 20px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #222;
+    flex-shrink: 0;
+}
+
+.vcoc-contentHeader h2 {
+    font-size: 18px;
+    font-weight: 800;
+    font-style: italic;
+    text-transform: uppercase;
+    margin: 0;
+}
+
+.vcoc-toggle-group {
+    display: flex;
+    background-color: #000;
+    padding: 4px;
+}
+
+.vcoc-toggle-btn {
+    padding: 10px 20px;
+    background-color: transparent;
+    color: #555;
+    border: 1px solid #333;
+    font-weight: 800;
+    cursor: pointer;
+    font-size: 12px;
+    text-transform: uppercase;
+    transition: 0.2s;
+}
+
+.vcoc-toggle-btn.active {
+    background-color: var(--kds-primary);
+    color: #000;
+    border-color: var(--kds-primary);
+}
+
+.vcoc-pedidos-container {
+    padding: 30px;
+    overflow-y: auto;
+    flex: 1;
+    display: grid;
+    gap: 25px;
+    align-content: flex-start;
+}
+
+.vcoc-pedidos-container.grid-view {
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+}
+
+.vcoc-pedidos-container.list-view {
+    grid-template-columns: 1fr;
+}
+
+/* --- TARJETAS DE PEDIDO --- */
+.vcoc-card {
+    background-color: #141414;
+    border: 2px solid #222;
+    display: flex;
+}
+
+.vcoc-card.grid {
+    flex-direction: column;
+}
+
+.vcoc-card.list {
+    flex-direction: row;
+}
+
+.vcoc-card.retraso {
+    border-color: var(--kds-danger);
+    box-shadow: 0 0 30px rgba(255, 49, 49, 0.1);
+}
+
+.vcoc-card-header {
+    padding: 20px;
+    background-color: #1c1c1c;
+    min-width: 150px;
+}
+
+.vcoc-card.grid .vcoc-card-header {
+    border-bottom: 2px solid var(--kds-border);
+}
+
+.vcoc-card.list .vcoc-card-header {
+    border-right: 2px solid var(--kds-border);
+}
+
+.vcoc-card.retraso .vcoc-card-header {
+    background-color: rgba(255, 49, 49, 0.05);
+}
+
+.vcoc-card-id {
+    font-size: 32px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 900;
+    color: var(--kds-white);
+}
+
+.vcoc-card.retraso .vcoc-card-id {
+    color: var(--kds-danger);
+}
+
+.vcoc-card-mesa {
+    font-size: 14px;
+    font-weight: 800;
+    color: #888;
+    margin-top: 5px;
+}
+
+.vcoc-card-tiempo {
+    font-size: 12px;
+    color: var(--kds-primary);
+    margin-top: 10px;
+}
+
+.vcoc-card-items {
+    flex: 1;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.vcoc-item {
+    display: flex;
+    gap: 15px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.vcoc-item.listo {
+    opacity: 0.3;
+}
+
+.vcoc-checkbox {
+    width: 22px;
+    height: 22px;
+    border: 2px solid var(--kds-primary);
+    background-color: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.vcoc-item.listo .vcoc-checkbox {
+    background-color: var(--kds-primary);
+}
+
+.vcoc-checkbox .material-symbols-outlined {
+    color: #000;
+    font-size: 18px;
+    font-weight: 900;
+}
+
+.vcoc-item-details {
+    flex: 1;
+}
+
+.vcoc-item-name {
+    font-size: 16px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.vcoc-item.listo .vcoc-item-name {
+    text-decoration: line-through;
+}
+
+.vcoc-item-nota {
+    color: var(--kds-caution);
+    font-size: 11px;
+    font-weight: 800;
+    background-color: rgba(255, 215, 0, 0.05);
+    padding: 4px 8px;
+    margin-top: 5px;
+    border-left: 2px solid var(--kds-caution);
+    display: inline-block;
+}
+
+.vcoc-card-action {
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    background-color: #000;
+}
+
+.vcoc-btn-completar {
+    width: 100%;
+    padding: 15px;
+    background-color: var(--kds-primary);
+    color: #000;
+    border: none;
+    font-weight: 900;
+    cursor: pointer;
+    font-size: 14px;
+    transition: transform 0.1s;
+}
+
+.vcoc-btn-completar:active {
+    transform: scale(0.98);
+}
+
+/* --- BARRA LATERAL (HISTORIAL) --- */
+.vcoc-aside {
+    width: 350px;
+    background-color: #0f0f0f;
+    border-left: 4px solid var(--kds-border);
+    /* Lo cambiamos a left para que quede a la derecha visualmente si invertimos, o a la izquierda según orden */
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+}
+
+.vcoc-aside-header {
+    padding: 25px;
+    background-color: #1a1a1a;
+    border-bottom: 2px solid var(--kds-border);
+}
+
+.vcoc-aside-header h2 {
+    font-size: 14px;
+    font-weight: 900;
+    margin: 0;
+    color: var(--kds-white);
+}
+
+.vcoc-aside-list {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.vcoc-completado-item {
+    padding: 15px;
+    background-color: #111;
+    border-left: 4px solid var(--kds-primary);
+    margin-bottom: 15px;
+}
+
+.vcoc-completado-top {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.vcoc-completado-top b {
+    color: var(--kds-primary);
+}
+
+.vcoc-completado-top span {
+    font-size: 12px;
+}
+
+.vcoc-completado-desc {
+    font-size: 11px;
+    color: #666;
+}
+
+/* --- FOOTER --- */
+.vcoc-footer {
+    background-color: var(--kds-panel);
+    border-top: 4px solid var(--kds-border);
+    padding: 15px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.vcoc-btn-voz {
+    background-color: #000;
+    border: 2px solid var(--kds-caution);
+    color: var(--kds-caution);
+    padding: 12px 30px;
+    border-radius: 50px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.vcoc-btn-voz.escuchando {
+    border-color: var(--kds-danger);
+    color: var(--kds-danger);
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(255, 49, 49, 0.4);
+    }
+
+    70% {
+        box-shadow: 0 0 0 15px rgba(255, 49, 49, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 49, 49, 0);
+    }
+}
+
+.vcoc-voz-text {
+    text-align: left;
+}
+
+.voz-title {
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.voz-subtitle {
+    font-size: 9px;
+    opacity: 0.6;
+}
+
+.vcoc-clock {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 24px;
+    color: var(--kds-primary);
+}
+
+
+/* =========================================================
+   MEDIA QUERIES - TABLETS Y MÓVILES
+========================================================= */
+
+@media (max-width: 1024px) {
+    .vcoc-aside {
+        width: 250px;
+        /* Reducimos el panel derecho en tablets */
+    }
+
+    .vcoc-pedidos-container.grid-view {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        /* Tarjetas más estrechas */
+    }
+}
+
+@media (max-width: 768px) {
+    .vcoc-header {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 15px 20px;
+        gap: 15px;
+    }
+
+    .vcoc-header-right {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .vcoc-main {
+        flex-direction: column;
+        /* Apilamos panel principal y panel de historial */
+        overflow-y: auto;
+        /* Dejamos que haga scroll global el contenedor MAIN en vez de independiente */
+    }
+
+    .vcoc-contentArea,
+    .vcoc-aside-list {
+        overflow: visible;
+        /* Desactivamos el overflow interno para móviles */
+    }
+
+    .vcoc-aside {
+        width: 100%;
+        border-left: none;
+        border-top: 4px solid var(--kds-border);
+        flex: none;
+        /* Que ocupe lo que tenga que ocupar abajo */
+    }
+
+    .vcoc-contentHeader {
+        padding: 15px 20px;
+        flex-direction: column;
+        gap: 15px;
+        align-items: stretch;
+    }
+
+    .vcoc-toggle-group {
+        justify-content: center;
+    }
+
+    .vcoc-toggle-btn {
+        flex: 1;
+        /* Botones a mitad y mitad */
+    }
+
+    .vcoc-pedidos-container {
+        padding: 15px;
+    }
+
+    .vcoc-pedidos-container.grid-view {
+        grid-template-columns: 1fr;
+        /* Forzamos 1 columna en móviles siempre */
+    }
+
+    .vcoc-card.list {
+        flex-direction: column;
+        /* En móvil, la vista lista también se apila */
+    }
+
+    .vcoc-card.list .vcoc-card-header {
+        border-right: none;
+        border-bottom: 2px solid var(--kds-border);
+    }
+
+    .vcoc-footer {
+        padding: 15px 20px;
+        flex-direction: column-reverse;
+        /* Reloj arriba, botón abajo */
+        gap: 15px;
+    }
+
+    .vcoc-btn-voz {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* =========================================================
+   ESTILOS PARA LA PANTALLA DE LOGIN (TEMA KDS)
+========================================================= */
+
+.vcoc-login-container {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--kds-bg);
+    /* Fondo oscuro */
+    font-family: 'Inter', sans-serif;
+    color: var(--kds-white);
+}
+
+.vcoc-login-box {
+    background-color: var(--kds-panel);
+    width: 100%;
+    max-width: 420px;
+    padding: 40px;
+    border: 3px solid var(--kds-border);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5);
+    box-sizing: border-box;
+}
+
+.vcoc-login-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.vcoc-login-header .login-icon {
+    font-size: 50px;
+    color: var(--kds-primary);
+    margin-bottom: 10px;
+}
+
+.vcoc-login-header h2 {
+    margin: 0 0 5px 0;
+    font-size: 24px;
+    font-weight: 900;
+    letter-spacing: -1px;
+}
+
+.vcoc-login-header p {
+    margin: 0;
+    font-size: 11px;
+    color: var(--kds-caution);
+    letter-spacing: 1px;
+}
+
+.vcoc-login-form .form-group {
+    margin-bottom: 25px;
+}
+
+.vcoc-login-form label {
+    display: block;
+    font-size: 12px;
+    font-weight: 800;
+    color: #888;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+
+.vcoc-login-form input {
+    width: 100%;
+    padding: 15px;
+    background-color: #050505;
+    border: 2px solid #333;
+    color: var(--kds-white);
+    font-size: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    box-sizing: border-box;
+    transition: 0.2s;
+}
+
+.vcoc-login-form input:focus {
+    outline: none;
+    border-color: var(--kds-primary);
+    box-shadow: 0 0 10px rgba(52, 211, 153, 0.2);
+}
+
+.vcoc-login-error {
+    background-color: rgba(239, 68, 68, 0.1);
+    color: var(--kds-danger);
+    padding: 12px;
+    border-left: 4px solid var(--kds-danger);
+    font-size: 12px;
+    font-weight: 800;
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.vcoc-btn-login {
+    width: 100%;
+    padding: 16px;
+    background-color: var(--kds-primary);
+    color: #000;
+    border: none;
+    font-size: 14px;
+    font-weight: 900;
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+
+.vcoc-btn-login:active {
+    transform: scale(0.98);
+}
+
+/* Botón de Logout en el Header del KDS */
+.vcoc-btn-logout {
+    background-color: #000;
+    border: 2px solid #333;
+    color: var(--kds-danger);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    margin-left: 20px;
+    transition: 0.2s;
+}
+
+.vcoc-btn-logout:hover {
+    border-color: var(--kds-danger);
+    background-color: rgba(239, 68, 68, 0.1);
+}

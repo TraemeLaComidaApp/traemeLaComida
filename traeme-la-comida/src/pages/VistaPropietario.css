@@ -1,0 +1,372 @@
+/* Variables locales para que no dependa de index.css */
+.admin-container {
+    --primary: #ec9213;
+    --primary-light: #fef4e6;
+    --text-muted: #64748b;
+    --bg-surface: #ffffff;
+    --border-color: #e2e8f0;
+
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background-color: #f8fafc;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    box-sizing: border-box;
+}
+
+.admin-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background-color: var(--bg-surface);
+    border-bottom: 1px solid var(--border-color);
+    width: 100%;
+}
+
+.header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 30px;
+    /* Más aire para escritorio */
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.brand-icon {
+    width: 40px;
+    height: 40px;
+    background-color: var(--primary-light);
+    color: var(--primary);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    /* Evita que el icono se encoja en móviles */
+}
+
+.brand-text h2 {
+    font-size: 18px;
+    /* Un poco más grande */
+    font-weight: 800;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    /* Puntos suspensivos si el nombre es muy largo */
+}
+
+.brand-text p {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin: 0;
+    letter-spacing: 0.5px;
+}
+
+/* El nav permite scroll horizontal nativo en móviles */
+.admin-nav {
+    display: flex;
+    gap: 30px;
+    padding: 0 30px;
+    background-color: var(--bg-surface);
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    /* Scroll suave en iOS */
+}
+
+.nav-link {
+    background: none;
+    border: none;
+    padding: 16px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    white-space: nowrap;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.nav-link:hover {
+    color: var(--primary);
+}
+
+.nav-link.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+    font-weight: 800;
+}
+
+.admin-main {
+    flex: 1;
+    padding: 30px;
+    /* Espacio para que el mapa respire */
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.menu-burger {
+    background: #f1f5f9;
+    border: none;
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--text-muted);
+}
+
+/* Utilidad para quitar scrollbar en el nav si hubiera mucho contenido */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* =========================================================
+   MEDIA QUERIES - MAGIA PARA MÓVILES
+========================================================= */
+@media (max-width: 768px) {
+    .header-top {
+        padding: 12px 15px;
+        /* Reducimos paddings laterales */
+    }
+
+    .brand-icon {
+        width: 35px;
+        height: 35px;
+    }
+
+    .brand-text h2 {
+        font-size: 16px;
+        /* Texto un poco más pequeño */
+    }
+
+    .brand-text p {
+        font-size: 10px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 250px;
+        /* Evita que el subtítulo rompa el diseño */
+    }
+
+    .admin-nav {
+        padding: 0 15px;
+        gap: 20px;
+        /* Reducimos el espacio entre botones */
+    }
+
+    .nav-link {
+        font-size: 13px;
+        padding: 12px 0;
+    }
+
+    .admin-main {
+        padding: 15px;
+        /* Reducimos el padding del contenido principal */
+    }
+}
+
+/* =========================================================
+   ESTILOS PARA LA PANTALLA DE LOGIN Y LOGOUT
+========================================================= */
+
+.login-container {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f1f5f9;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.login-box {
+    background: #ffffff;
+    width: 100%;
+    max-width: 400px;
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+    box-sizing: border-box;
+}
+
+.login-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.login-icon {
+    font-size: 48px;
+    color: var(--primary, #ec9213);
+    background: #fef4e6;
+    padding: 15px;
+    border-radius: 50%;
+    margin-bottom: 15px;
+}
+
+.login-header h2 {
+    margin: 0 0 5px 0;
+    color: #1e293b;
+    font-weight: 800;
+}
+
+.login-header p {
+    margin: 0;
+    color: #64748b;
+    font-size: 14px;
+}
+
+.login-form .form-group {
+    margin-bottom: 20px;
+}
+
+.login-form label {
+    display: block;
+    font-size: 13px;
+    font-weight: 700;
+    color: #475569;
+    margin-bottom: 8px;
+}
+
+.login-form input {
+    width: 100%;
+    padding: 14px;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 15px;
+    box-sizing: border-box;
+    transition: border-color 0.2s;
+}
+
+.login-form input:focus {
+    outline: none;
+    border-color: var(--primary, #ec9213);
+}
+
+.login-error {
+    background-color: #fef2f2;
+    color: #ef4444;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 20px;
+    border: 1px solid #fca5a5;
+}
+
+.btn-login {
+    width: 100%;
+    padding: 15px;
+    background-color: var(--primary, #ec9213);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.1s, background-color 0.2s;
+}
+
+.btn-login:hover {
+    background-color: #d97706;
+}
+
+.btn-login:active {
+    transform: scale(0.98);
+}
+
+/* Botón de cerrar sesión en el header del panel */
+.btn-logout {
+    background: transparent;
+    border: none;
+    color: #ef4444;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+}
+
+.btn-logout:hover {
+    background-color: #fef2f2;
+}
+
+/* =========================================================
+   NUEVOS ESTILOS: RECUPERACIÓN DE CONTRASEÑA
+========================================================= */
+
+.label-con-link {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+}
+
+.label-con-link label {
+    margin-bottom: 0;
+    /* Anula el margin inferior para alinearlo con el enlace */
+}
+
+.link-olvido {
+    background: none;
+    border: none;
+    color: var(--primary, #ec9213);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 0;
+    transition: color 0.2s;
+}
+
+.link-olvido:hover {
+    color: #d97706;
+    text-decoration: underline;
+}
+
+.btn-secundario-link {
+    background: none;
+    border: none;
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 15px;
+    padding: 10px;
+    transition: color 0.2s;
+}
+
+.btn-secundario-link:hover {
+    color: #1e293b;
+    text-decoration: underline;
+}
+
+.login-mensaje {
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 20px;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.mensaje-exito {
+    background-color: #d1fae5;
+    color: #10b981;
+    border: 1px solid #a7f3d0;
+}
