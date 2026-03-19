@@ -36,7 +36,7 @@ export const añadirAComanda = async (mesaId, sesionId, pedidoId, producto) => {
             id_producto: producto.id,
             cantidad: 1,
             precio_unitario: producto.precio,
-            esta_listo: false
+            estado: 'no_servido'
         })
     });
 };
@@ -49,7 +49,7 @@ export const servirDetalles = async (detallesIds) => {
     for (const dId of detallesIds) {
         await fetchApi(`/detalle-pedido/${dId}`, {
             method: 'PATCH',
-            body: JSON.stringify({ esta_listo: true })
+            body: JSON.stringify({ estado: 'listo' })
         });
     }
 };
@@ -87,6 +87,6 @@ export const cobrarYFinalizarMesa = async (sesionId, pedidoId, totalCalculado, m
 export const simularPlatoListo = async (detalleId) => {
     await fetchApi(`/detalle-pedido/${detalleId}`, {
         method: 'PATCH',
-        body: JSON.stringify({ esta_listo: true })
+        body: JSON.stringify({ estado: 'listo' })
     });
 };

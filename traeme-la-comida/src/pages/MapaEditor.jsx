@@ -61,7 +61,7 @@ const MapaEditor = () => {
             alto: altoFijo,
             rotacion: 0,
             uid: uniqueId,
-            link_qr: `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${prefijo}_${num}_${uniqueId}`
+            uuid: `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${prefijo}_${num}_${uniqueId}`
         };
 
         actualizarSalaConfig({ elementos: [...salaActiva.elementos, nuevo] });
@@ -234,7 +234,7 @@ const MapaEditor = () => {
                     <div className="inventory-list">
                         {salaActiva.elementos.map(el => (
                             <div key={el.id} className="inventory-item">
-                                <img src={el.link_qr} onClick={() => setQrZoom(el)} alt="qr" />
+                                <img src={el.uuid} onClick={() => setQrZoom(el)} alt="qr" />
                                 <div className="inventory-details">
                                     <input
                                         type="text"
@@ -249,7 +249,7 @@ const MapaEditor = () => {
                                             actualizarElemento(el.id, {
                                                 numero: nuevoNum,
                                                 uid: currentUid,
-                                                link_qr: `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${pref}_${nuevoNum}_${currentUid}`,
+                                                uuid: `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${pref}_${nuevoNum}_${currentUid}`,
                                                 error_duplicado: yaExiste // Opcional: para marcarlo visualmente
                                             });
                                         }}
@@ -268,9 +268,9 @@ const MapaEditor = () => {
                 <div className="qr-modal-overlay" onClick={() => setQrZoom(null)}>
                     <div className="qr-modal-content" onClick={e => e.stopPropagation()}>
                         <h2>{qrZoom.tipo === 'barra' ? 'Barra' : 'Mesa'} #{qrZoom.numero}</h2>
-                        <img src={qrZoom.link_qr} alt="qr" />
+                        <img src={qrZoom.uuid} alt="qr" />
                         <div className="qr-actions">
-                            <a href={qrZoom.link_qr} download={`QR_${qrZoom.tipo}_${qrZoom.numero}.png`} className="btn-download">Descargar</a>
+                            <a href={qrZoom.uuid} download={`QR_${qrZoom.tipo}_${qrZoom.numero}.png`} className="btn-download">Descargar</a>
                             <button onClick={() => setQrZoom(null)} className="btn-close">Cerrar</button>
                         </div>
                     </div>

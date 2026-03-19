@@ -23,10 +23,10 @@ export class CreateDetallePedidoDto {
   @IsNumber()
   precio_unitario: number;
 
-  @ApiProperty({ required: false, type: () => Boolean, default: false })
+  @ApiProperty({ required: false, type: () => String, default: 'no_servido' })
   @IsOptional()
-  @IsBoolean()
-  esta_listo?: boolean;
+  @IsString()
+  estado?: string;
 
   @ApiProperty({ required: false, type: () => String })
   @IsOptional()

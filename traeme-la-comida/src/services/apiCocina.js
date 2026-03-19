@@ -27,7 +27,7 @@ export const getPedidosPendientesCocina = async () => {
             const detallesPedido = (detalles || []).filter(d => d.id_pedido === p.id);
             // Ignore any fully finished orders internally, but for UI wait for UI state to represent it.
             // Old UI logic used `Pendiente`, `Preparando`, `Listo`.
-            // With boolean `esta_listo`, if it is `false`, it's `preparando`, if `true`, it's `listo`.
+            // With enum `estado`, if it is `'no_servido'`, it's `preparando`, if `'listo'`, it's `listo`, if `'servido'`, it's `servido`.
             const detallesValidos = detallesPedido;
             
             if (detallesValidos.length === 0) return null;
@@ -43,7 +43,7 @@ export const getPedidosPendientesCocina = async () => {
                         nombre: prodObj?.nombre || 'Desconocido',
                         cantidad: d.cantidad,
                         notas: d.notas,
-                        estado: d.esta_listo ? 'listo' : 'preparando' 
+                        estado: d.estado
                     }
                 })
             };
@@ -57,11 +57,9 @@ export const getPedidosPendientesCocina = async () => {
 };
 
 export const actualizarEstadoDetalle = async (detalleId, nuevoEstado) => {
-    const esta_listo = nuevoEstado === 'listo';
-    
     await fetchApi(`/detalle-pedido/${detalleId}`, {
         method: 'PATCH',
-        body: JSON.stringify({ esta_listo })
+        body: JSON.stringify({ estado: nuevoEstado })
     });
 };
 

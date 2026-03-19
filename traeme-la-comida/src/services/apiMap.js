@@ -23,7 +23,7 @@ export const getSalasConMesas = async () => {
                     ancho: m.ancho,
                     alto: m.alto,
                     rotacion: m.rotacion,
-                    link_qr: m.link_qr
+                    uuid: m.uuid
                 }))
         }));
     } catch (error) {
@@ -84,7 +84,7 @@ export const guardarPlanoCompleto = async (salas) => {
                 ancho: Number(mesa.ancho),
                 alto: Number(mesa.alto),
                 rotacion: Number(mesa.rotacion),
-                link_qr: mesa.link_qr || ''
+                uuid: mesa.uuid || ''
             };
 
             if (isNewItem(mesa.id)) {

@@ -21,7 +21,7 @@ export class CreateMesaDto {
   @ApiProperty({ required: false, type: () => String })
   @IsOptional()
   @IsString()
-  link_qr?: string;
+  uuid?: string;
 
   @ApiProperty({ required: false, type: () => Number })
   @IsOptional()

@@ -38,7 +38,7 @@ export const useMesasRealtime = () => {
                     detOfPedido.forEach(det => {
                         const prod = (productos || []).find(pr => pr.id === det.id_producto);
                         
-                        if (det.esta_listo) {
+                        if (det.estado === 'listo' || det.estado === 'servido') {
                             readyItemsCount++;
                         }
 
@@ -48,7 +48,7 @@ export const useMesasRealtime = () => {
                             nombre: prod?.nombre || 'Producto',
                             precio: det.precio_unitario,
                             cantidad: det.cantidad,
-                            estadoItem: det.esta_listo ? 'listo' : 'preparando',
+                            estadoItem: det.estado,
                             notas: det.notas
                         });
                     });

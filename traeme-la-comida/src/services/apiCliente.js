@@ -48,7 +48,7 @@ export const submitOrder = async (mesaId, esBarra, numeroPedidoBarra, carrito, c
             id_producto: item.producto.id,
             cantidad: item.cantidad || 1,
             precio_unitario: totalPorUnidad,
-            esta_listo: false, // Swagger equivalent logic for 'Pendiente' / waiting
+            estado: 'no_servido', // Swagger equivalent logic for 'Pendiente' / waiting
             notas: item.notaPersonal || notasFromExtras
         };
 
