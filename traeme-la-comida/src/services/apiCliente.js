@@ -81,3 +81,37 @@ export const submitOrder = async (mesaId, esBarra, numeroPedidoBarra, carrito, c
         }
     }
 };
+
+/**
+ * Update session state to request payment
+ */
+export const solicitarPago = async (mesaId) => {
+    const sesiones = await fetchApi('/sesion') || [];
+    // Usamos == para permitir comparación de string/number si fuera el caso, 
+    // y ampliamos estados para encontrar la sesión actual.
+    const sesionActiva = sesiones.find(s => s.id_mesa == mesaId && s.estado !== 'Cerrada' && s.estado !== 'Completado');
+    if (sesionActiva) {
+        await fetchApi(`/sesion/${sesionActiva.id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ estado: 'Pendiente_cobro' })
+        });
+    } else {
+        console.warn("No active session found for mesaId:", mesaId);
+    }
+};
+
+/**
+ * Update session state to call for assistance
+ */
+export const llamarCamarero = async (mesaId) => {
+    const sesiones = await fetchApi('/sesion') || [];
+    const sesionActiva = sesiones.find(s => s.id_mesa == mesaId && s.estado !== 'Cerrada' && s.estado !== 'Completado');
+    if (sesionActiva) {
+        await fetchApi(`/sesion/${sesionActiva.id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ estado: 'Peticion_asistencia' })
+        });
+    } else {
+        console.warn("No active session found for mesaId:", mesaId);
+    }
+};

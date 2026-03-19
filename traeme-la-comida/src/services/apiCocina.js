@@ -25,10 +25,8 @@ export const getPedidosPendientesCocina = async () => {
             }
 
             const detallesPedido = (detalles || []).filter(d => d.id_pedido === p.id);
-            // Ignore any fully finished orders internally, but for UI wait for UI state to represent it.
-            // Old UI logic used `Pendiente`, `Preparando`, `Listo`.
-            // With enum `estado`, if it is `'no_servido'`, it's `preparando`, if `'listo'`, it's `listo`, if `'servido'`, it's `servido`.
-            const detallesValidos = detallesPedido;
+            // Mostramos platos que NO estén servidos. El filtrado de 'listo' se hará en el componente para el historial.
+            const detallesValidos = detallesPedido.filter(d => d.estado !== 'servido');
             
             if (detallesValidos.length === 0) return null;
 

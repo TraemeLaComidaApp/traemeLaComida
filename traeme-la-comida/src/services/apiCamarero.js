@@ -50,7 +50,7 @@ export const servirDetalles = async (detallesIds) => {
     for (const dId of detallesIds) {
         await fetchApi(`/detalle-pedido/${dId}`, {
             method: 'PATCH',
-            body: JSON.stringify({ estado: 'listo' })
+            body: JSON.stringify({ estado: 'servido' })
         });
     }
 };

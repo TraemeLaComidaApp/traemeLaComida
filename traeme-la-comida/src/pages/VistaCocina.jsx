@@ -53,12 +53,12 @@ const VistaCocina = () => {
         if (!pedido) return;
 
         const itemActual = pedido.items[itemIndex];
-        if (itemActual.estado === 'agotado') return; // Si es agotado no hacer nada
+        if (itemActual.estado === 'agotado') return;
 
-        // Flow: pendiente -> preparando -> listo -> pendiente ...
-        let nuevoEstado = 'pendiente';
-        if (itemActual.estado === 'pendiente') nuevoEstado = 'preparando';
-        else if (itemActual.estado === 'preparando') nuevoEstado = 'listo';
+        // Flow: no_servido -> listo
+        let nuevoEstado = 'no_servido';
+        if (itemActual.estado === 'no_servido') nuevoEstado = 'listo';
+        else if (itemActual.estado === 'listo') nuevoEstado = 'no_servido'; // Toggle back if needed
 
         try {
             await actualizarEstadoDetalle(itemActual.idDetalle, nuevoEstado);
@@ -307,7 +307,7 @@ const VistaCocina = () => {
                         ) : pedidos.length === 0 ? (
                             <div style={{ padding: '20px', color: '#888' }}>No hay pedidos en curso. Buen trabajo.</div>
                         ) : (
-                            pedidos.map(p => {
+                            pedidos.filter(p => p.items.some(i => i.estado !== 'listo')).map(p => {
                                 // Determinamos retraso simple (> 10 mins)
                                 const minsTranscurridos = (new Date() - p.fecha) / 60000;
                                 const retraso = minsTranscurridos > 10;
@@ -321,11 +321,12 @@ const VistaCocina = () => {
                                         </div>
 
                                         <div className="vcoc-card-items">
-                                            {p.items.map((item, idx) => (
+                                            {/* En la tarjeta solo mostramos lo que NO esté listo */}
+                                            {p.items.filter(i => i.estado !== 'listo').map((item, idx) => (
                                                 <div key={item.idDetalle} onClick={() => toggleItem(p.idPedido, idx)} className={`vcoc-item vcoc-estado-${item.estado}`}>
                                                     <div className="vcoc-checkbox">
                                                         {item.estado === 'listo' && <span className="material-symbols-outlined">check</span>}
-                                                        {item.estado === 'preparando' && <span className="material-symbols-outlined" style={{ color: '#ffc107' }}>outdoor_grill</span>}
+                                                        {item.estado === 'no_servido' && <span className="material-symbols-outlined" style={{ color: '#ffc107' }}>outdoor_grill</span>}
                                                     </div>
                                                     <div className="vcoc-item-details">
                                                         <div className="vcoc-item-name">{item.cantidad}x {item.nombre}</div>

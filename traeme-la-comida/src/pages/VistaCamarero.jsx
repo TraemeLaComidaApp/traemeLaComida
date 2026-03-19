@@ -60,19 +60,22 @@ export default function VistaCamarero() {
     // --- 3. FUNCIONES DE CÁLCULO VISUAL ---
     const calcularEstadoMesa = (mesa) => {
         if (mesa.necesitaCobro) return { bg: '#fecaca', border: '#ef4444', estado: 'cobrar' };
+        if (mesa.estadoSesion === 'Peticion_asistencia') return { bg: '#bae6fd', border: '#0ea5e9', estado: 'asistencia' };
         const tieneListos = mesa.pedido.some(p => p.estadoItem === 'listo');
         if (tieneListos) return { bg: '#fef08a', border: '#eab308', estado: 'servir' };
-        const tienePreparando = mesa.pedido.some(p => p.estadoItem === 'preparando');
-        if (tienePreparando || mesa.pedido.length > 0) return { bg: '#f1f5f9', border: '#94a3b8', estado: 'ocupada' };
+        const tieneNoServido = mesa.pedido.some(p => p.estadoItem === 'no_servido');
+        if (tieneNoServido || mesa.pedido.length > 0) return { bg: '#f1f5f9', border: '#94a3b8', estado: 'ocupada' };
         return { bg: '#ffffff', border: '#cbd5e1', estado: 'libre' };
     };
 
     const getNotificacionSala = (idSalaBuscada) => {
         const mesasSala = mesas.filter(m => m.salaId === idSalaBuscada);
         const hayCobro = mesasSala.some(m => m.necesitaCobro);
+        const hayAsistencia = mesasSala.some(m => m.estadoSesion === 'Peticion_asistencia');
         const hayListo = mesasSala.some(m => m.pedido.some(p => p.estadoItem === 'listo'));
 
         if (hayCobro) return <span className="sala-dot dot-rojo"></span>;
+        if (hayAsistencia) return <span className="sala-dot dot-rojo blink-dot"></span>; // Or blue if desired
         if (hayListo) return <span className="sala-dot dot-amarillo"></span>;
         return null;
     };
@@ -235,6 +238,9 @@ export default function VistaCamarero() {
                                             {mesa.metodoPago === 'card' ? '💳' : '💶'}
                                         </div>
                                     )}
+                                    {styleInfo.estado === 'asistencia' && (
+                                        <div className="badge-notificacion badge-rojo">🛎️</div>
+                                    )}
                                     {styleInfo.estado === 'servir' && !mesa.necesitaCobro && (
                                         <div className="badge-notificacion badge-amarillo">🍽️</div>
                                     )}
@@ -273,7 +279,7 @@ export default function VistaCamarero() {
                                         <span>
                                             {item.nombre}
                                             {item.estadoItem === 'listo' && <small className="tag-listo">LISTO</small>}
-                                            {item.estadoItem === 'preparando' && <small className="tag-prep">Prep...</small>}
+                                            {item.estadoItem === 'no_servido' && <small className="tag-prep">En prep...</small>}
                                         </span>
                                         {item.notas && <small style={{ color: '#64748b', fontSize: '11px', fontStyle: 'italic' }}>{item.notas}</small>}
                                     </span>
@@ -303,9 +309,9 @@ export default function VistaCamarero() {
                         </select>
                     </div>
 
-                    {mesaActiva.pedido.some(p => p.estadoItem === 'preparando') && (
+                    {mesaActiva.pedido.some(p => p.estadoItem === 'no_servido') && (
                         <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
-                            {mesaActiva.pedido.filter(p => p.estadoItem === 'preparando').map(p => (
+                            {mesaActiva.pedido.filter(p => p.estadoItem === 'no_servido').map(p => (
                                 <button key={p.idDetalle} style={{ margin: '5px 0', padding: '5px', background: '#f8fafc', border: '1px dashed #cbd5e1', cursor: 'pointer', borderRadius: '4px' }} onClick={() => simularPlatoListoLocal(p.idDetalle)}>
                                     🛠️ [DEV] Listo: {p.nombre}
                                 </button>

@@ -7,7 +7,7 @@ export default function MenuEditor() {
 
     // ESTADOS PARA DRAG & DROP
     const [draggedCatIndex, setDraggedCatIndex] = useState(null);
-    const [draggedProdInfo, setDraggedProdInfo] = useState(null); // Guarda { catId, prodIndex }
+    const [draggedProdInfo, setDraggedProdInfo] = useState(null);
 
     const [categorias, setCategorias] = useState([]);
     const [cargando, setCargando] = useState(true);
@@ -38,8 +38,6 @@ export default function MenuEditor() {
     // =========================================================
     // LÓGICA DE DRAG AND DROP (ARRASTRAR Y SOLTAR)
     // =========================================================
-
-    // --- Arrastrar Categorías ---
     const handleCatDragStart = (index) => setDraggedCatIndex(index);
     const handleCatDragEnter = (e, index) => {
         if (draggedCatIndex === null || draggedCatIndex === index) return;
@@ -49,16 +47,14 @@ export default function MenuEditor() {
         nuevasCategorias.splice(draggedCatIndex, 1);
         nuevasCategorias.splice(index, 0, itemArrastrado);
 
-        // Reasignamos el orden
         nuevasCategorias.forEach((cat, i) => cat.orden = i);
         setCategorias(nuevasCategorias);
         setDraggedCatIndex(index);
     };
     const handleCatDragEnd = () => setDraggedCatIndex(null);
 
-    // --- Arrastrar Productos ---
     const handleProdDragStart = (e, catId, prodIndex) => {
-        e.stopPropagation(); // Evitar que la categoría capture el evento
+        e.stopPropagation();
         setDraggedProdInfo({ catId, prodIndex });
     };
 
@@ -74,7 +70,6 @@ export default function MenuEditor() {
         nuevosProds.splice(draggedProdInfo.prodIndex, 1);
         nuevosProds.splice(targetIndex, 0, itemArrastrado);
 
-        // Reasignamos el orden
         nuevosProds.forEach((p, i) => p.orden = i);
         nuevasCategorias[catIndex].productos = nuevosProds;
 
@@ -84,13 +79,13 @@ export default function MenuEditor() {
     const handleProdDragEnd = () => setDraggedProdInfo(null);
 
     // =========================================================
-    // LÓGICA DE CATEGORÍAS Y SUS OPCIONES
+    // LÓGICA DE CATEGORÍAS (Sin opciones)
     // =========================================================
     const abrirEditorCategoria = (categoria = null) => {
         if (categoria) {
-            setEditandoCategoria({ ...categoria, gruposOpciones: categoria.gruposOpciones || [] });
+            setEditandoCategoria({ ...categoria });
         } else {
-            setEditandoCategoria({ id: Date.now(), nombre: '', orden: categorias.length, gruposOpciones: [], productos: [] });
+            setEditandoCategoria({ id: Date.now(), nombre: '', orden: categorias.length, productos: [] });
         }
     };
 
@@ -113,83 +108,12 @@ export default function MenuEditor() {
         }
     };
 
-    const agregarGrupoOpcionCat = () => {
-        setEditandoCategoria({
-            ...editandoCategoria,
-            gruposOpciones: [...editandoCategoria.gruposOpciones, {
-                id: Date.now(),
-                nombre: '',
-                obligatorio: false,
-                opciones: [],
-                orden: editandoCategoria.gruposOpciones.length // <--- AÑADIMOS EL ORDEN
-            }]
-        });
-    };
-
-    // Usamos una función general para actualizar campos del grupo (nombre, obligatorio, etc.)
-    const actualizarCampoGrupoCat = (grupoId, campo, valor) => {
-        setEditandoCategoria({
-            ...editandoCategoria,
-            gruposOpciones: editandoCategoria.gruposOpciones.map(g => g.id === grupoId ? { ...g, [campo]: valor } : g)
-        });
-    };
-
-    const eliminarGrupoOpcionCat = (grupoId) => {
-        setEditandoCategoria({
-            ...editandoCategoria,
-            gruposOpciones: editandoCategoria.gruposOpciones.filter(g => g.id !== grupoId)
-        });
-    };
-
-    const agregarOpcionAGrupoCat = (grupoId) => {
-        setEditandoCategoria({
-            ...editandoCategoria,
-            gruposOpciones: editandoCategoria.gruposOpciones.map(g => {
-                if (g.id === grupoId) {
-                    return {
-                        ...g,
-                        opciones: [...g.opciones, {
-                            id: Date.now(),
-                            nombre: '',
-                            suplemento: 0,
-                            orden: g.opciones.length // <--- AÑADIMOS EL ORDEN
-                        }]
-                    };
-                }
-                return g;
-            })
-        });
-    };
-
-    const actualizarOpcionCat = (grupoId, opcionId, campo, valor) => {
-        setEditandoCategoria({
-            ...editandoCategoria,
-            gruposOpciones: editandoCategoria.gruposOpciones.map(g => {
-                if (g.id === grupoId) {
-                    return { ...g, opciones: g.opciones.map(o => o.id === opcionId ? { ...o, [campo]: valor } : o) };
-                }
-                return g;
-            })
-        });
-    };
-
-    const eliminarOpcionCat = (grupoId, opcionId) => {
-        setEditandoCategoria({
-            ...editandoCategoria,
-            gruposOpciones: editandoCategoria.gruposOpciones.map(g => {
-                if (g.id === grupoId) return { ...g, opciones: g.opciones.filter(o => o.id !== opcionId) };
-                return g;
-            })
-        });
-    };
-
     // =========================================================
-    // LÓGICA DE PRODUCTOS
+    // LÓGICA DE PRODUCTOS (Opciones y sus relaciones Mín/Máx)
     // =========================================================
     const abrirEditorProducto = (catId, producto = null) => {
-        const cat = categorias.find(c => c.id === catId);
-        setEditandoProd(producto ? { ...producto, catId } : {
-            id: null, catId, nombre: '', descripcion: '', precio: '', img: '', visible: true, orden: cat.productos.length
+        setEditandoProd(producto ? { ...producto, catId, gruposOpciones: producto.gruposOpciones || [] } : {
+            id: null, catId, nombre: '', desc: '', precio: '', img: '', visible: true, orden: cat.productos.length, gruposOpciones: []
         });
     };
 
@@ -233,6 +157,77 @@ export default function MenuEditor() {
         } : cat));
     };
 
+    // --- Modificadores (Relación producto_categoria_opcion) ---
+    const agregarGrupoOpcionProd = () => {
+        setEditandoProd({
+            ...editandoProd,
+            gruposOpciones: [...(editandoProd.gruposOpciones || []), {
+                id: Date.now(),
+                nombre: '',
+                min_selecciones: 0, // Campo DB
+                max_selecciones: 1, // Campo DB
+                opciones: [],
+                orden: (editandoProd.gruposOpciones || []).length // Campo DB
+            }]
+        });
+    };
+
+    const actualizarCampoGrupoProd = (grupoId, campo, valor) => {
+        setEditandoProd({
+            ...editandoProd,
+            gruposOpciones: editandoProd.gruposOpciones.map(g => g.id === grupoId ? { ...g, [campo]: valor } : g)
+        });
+    };
+
+    const eliminarGrupoOpcionProd = (grupoId) => {
+        setEditandoProd({
+            ...editandoProd,
+            gruposOpciones: editandoProd.gruposOpciones.filter(g => g.id !== grupoId)
+        });
+    };
+
+    const agregarOpcionAGrupoProd = (grupoId) => {
+        setEditandoProd({
+            ...editandoProd,
+            gruposOpciones: editandoProd.gruposOpciones.map(g => {
+                if (g.id === grupoId) {
+                    return {
+                        ...g,
+                        opciones: [...g.opciones, {
+                            id: Date.now(),
+                            nombre: '',
+                            suplemento: 0,
+                            orden: g.opciones.length
+                        }]
+                    };
+                }
+                return g;
+            })
+        });
+    };
+
+    const actualizarOpcionProd = (grupoId, opcionId, campo, valor) => {
+        setEditandoProd({
+            ...editandoProd,
+            gruposOpciones: editandoProd.gruposOpciones.map(g => {
+                if (g.id === grupoId) {
+                    return { ...g, opciones: g.opciones.map(o => o.id === opcionId ? { ...o, [campo]: valor } : o) };
+                }
+                return g;
+            })
+        });
+    };
+
+    const eliminarOpcionProd = (grupoId, opcionId) => {
+        setEditandoProd({
+            ...editandoProd,
+            gruposOpciones: editandoProd.gruposOpciones.map(g => {
+                if (g.id === grupoId) return { ...g, opciones: g.opciones.filter(o => o.id !== opcionId) };
+                return g;
+            })
+        });
+    };
+
     if (cargando) {
         return <div className="menu-editor" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}><h3>Cargando Menú...</h3></div>;
     }
@@ -263,35 +258,20 @@ export default function MenuEditor() {
                         <div className="category-header-wrapper">
                             <div className="category-header-main">
                                 <div className="category-title-area">
-                                    {/* Icono Drag */}
                                     <span className="material-symbols-outlined drag-handle" title="Arrastrar categoría">drag_indicator</span>
                                     <h3>{cat.nombre}</h3>
                                     <span className="count">{cat.productos.length} productos</span>
                                 </div>
                                 <div className="category-actions">
                                     <button className="btn-edit-category" onClick={() => abrirEditorCategoria(cat)}>
-                                        <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>settings</span>
-                                        Configurar Extras y Categoría
+                                        <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>edit</span>
+                                        Renombrar
                                     </button>
                                     <button className="delete-cat-btn" onClick={() => eliminarCategoria(cat.id)} title="Eliminar Categoría">
                                         <span className="material-symbols-outlined">delete_sweep</span>
                                     </button>
                                 </div>
                             </div>
-
-                            {cat.gruposOpciones?.length > 0 && (
-                                <div className="category-options-preview">
-                                    <span className="options-label">
-                                        <span className="material-symbols-outlined" style={{ fontSize: '14px', marginRight: '4px', verticalAlign: 'middle' }}>tune</span>
-                                        Extras aplicados:
-                                    </span>
-                                    {cat.gruposOpciones.map(g => (
-                                        <span key={g.id} className={`option-badge ${g.obligatorio ? 'obligatorio' : ''}`}>
-                                            {g.nombre} {g.obligatorio && '*'}
-                                        </span>
-                                    ))}
-                                </div>
-                            )}
                         </div>
 
                         <div className="product-list">
@@ -315,6 +295,13 @@ export default function MenuEditor() {
                                         <div className="product-info">
                                             <h4>{p.nombre}</h4>
                                             <p className="price">{Number(p.precio).toFixed(2)}€</p>
+
+                                            {p.gruposOpciones?.length > 0 && (
+                                                <small style={{ color: '#94a3b8', fontSize: '11px', display: 'block', marginTop: '4px' }}>
+                                                    <span className="material-symbols-outlined" style={{ fontSize: '12px', verticalAlign: 'middle' }}>tune</span> {p.gruposOpciones.length} grupos de opciones
+                                                </small>
+                                            )}
+
                                             <div className="actions">
                                                 <button className="icon-btn" onClick={() => abrirEditorProducto(cat.id, p)}>
                                                     <span className="material-symbols-outlined">edit</span>
@@ -343,12 +330,12 @@ export default function MenuEditor() {
                 </button>
             </div>
 
-            {/* MODAL DE EDICIÓN DE CATEGORÍA Y OPCIONES */}
+            {/* MODAL DE EDICIÓN DE CATEGORÍA */}
             {editandoCategoria && (
                 <div className="modal-overlay">
                     <form className="product-modal" onSubmit={guardarCategoria}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                            <h3 style={{ margin: 0 }}>{editandoCategoria.productos ? 'Configurar' : 'Añadir'} Categoría</h3>
+                            <h3 style={{ margin: 0 }}>{editandoCategoria.productos ? 'Renombrar' : 'Añadir'} Categoría</h3>
                             <button type="button" className="btn-close-modal" onClick={() => setEditandoCategoria(null)}>×</button>
                         </div>
 
@@ -362,76 +349,6 @@ export default function MenuEditor() {
                             />
                         </div>
 
-                        <div className="options-section">
-                            <div className="options-header">
-                                <h4>Opciones y Extras</h4>
-                                <p>Estas opciones se aplicarán a <strong>todos</strong> los productos.</p>
-                            </div>
-
-                            {editandoCategoria.gruposOpciones.map(grupo => (
-                                <div key={grupo.id} className="option-group-card">
-                                    <div className="option-group-top">
-                                        <input
-                                            type="text"
-                                            className="group-name-input"
-                                            placeholder="Nombre del grupo (Ej: Tipo de Leche)"
-                                            value={grupo.nombre}
-                                            onChange={(e) => actualizarCampoGrupoCat(grupo.id, 'nombre', e.target.value)}
-                                        />
-
-                                        {/* NUEVO: CHECKBOX OBLIGATORIO */}
-                                        <label className="checkbox-obligatorio">
-                                            <input
-                                                type="checkbox"
-                                                checked={grupo.obligatorio || false}
-                                                onChange={(e) => actualizarCampoGrupoCat(grupo.id, 'obligatorio', e.target.checked)}
-                                            />
-                                            Obligatorio
-                                        </label>
-
-                                        <button type="button" className="btn-delete-group" onClick={() => eliminarGrupoOpcionCat(grupo.id)} title="Eliminar este grupo">
-                                            <span className="material-symbols-outlined">delete</span>
-                                        </button>
-                                    </div>
-
-                                    <div className="option-items-list">
-                                        {grupo.opciones.map(opcion => (
-                                            <div key={opcion.id} className="option-item-row">
-                                                <input
-                                                    type="text"
-                                                    placeholder="Ej: Avena"
-                                                    value={opcion.nombre}
-                                                    onChange={(e) => actualizarOpcionCat(grupo.id, opcion.id, 'nombre', e.target.value)}
-                                                />
-                                                <div className="suplemento-wrapper">
-                                                    <span>+</span>
-                                                    <input
-                                                        type="number"
-                                                        step="0.01"
-                                                        placeholder="0.00"
-                                                        value={opcion.suplemento}
-                                                        onChange={(e) => actualizarOpcionCat(grupo.id, opcion.id, 'suplemento', e.target.value)}
-                                                    />
-                                                    <span>€</span>
-                                                </div>
-                                                <button type="button" className="btn-delete-option" onClick={() => eliminarOpcionCat(grupo.id, opcion.id)}>
-                                                    ×
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <button type="button" className="btn-add-option" onClick={() => agregarOpcionAGrupoCat(grupo.id)}>
-                                        + Añadir opción
-                                    </button>
-                                </div>
-                            ))}
-
-                            <button type="button" className="btn-add-group" onClick={agregarGrupoOpcionCat}>
-                                <span className="material-symbols-outlined">add_circle</span>
-                                Nuevo Grupo de Extras
-                            </button>
-                        </div>
-
                         <div className="modal-footer">
                             <div style={{ display: 'flex', gap: '10px', width: '100%', justifyContent: 'flex-end', marginTop: '20px' }}>
                                 <button type="button" onClick={() => setEditandoCategoria(null)} className="btn-cancel">Cancelar</button>
@@ -442,7 +359,7 @@ export default function MenuEditor() {
                 </div>
             )}
 
-            {/* MODAL DE EDICIÓN DE PRODUCTO */}
+            {/* MODAL DE EDICIÓN DE PRODUCTO (CON SUS OPCIONES) */}
             {editandoProd && (
                 <div className="modal-overlay">
                     <form className="product-modal" onSubmit={guardarProducto}>
@@ -456,7 +373,7 @@ export default function MenuEditor() {
                         </div>
                         <div className="input-group">
                             <label>Descripción</label>
-                            <textarea value={editandoProd.descripcion} onChange={e => setEditandoProd({ ...editandoProd, descripcion: e.target.value })} />
+                            <textarea value={editandoProd.desc} onChange={e => setEditandoProd({ ...editandoProd, desc: e.target.value })} />
                         </div>
                         <div className="row">
                             <div className="input-group">
@@ -480,6 +397,90 @@ export default function MenuEditor() {
                                 </div>
                             </div>
                         </div>
+
+                        {/* SECCIÓN DE OPCIONES Y MODIFICADORES */}
+                        <div className="options-section">
+                            <div className="options-header">
+                                <h4>Opciones y Modificadores</h4>
+                                <p>Añade variantes (tipo de leche, extras...) a este producto.</p>
+                            </div>
+
+                            {editandoProd.gruposOpciones?.map(grupo => (
+                                <div key={grupo.id} className="option-group-card">
+                                    <div className="option-group-top">
+                                        <input
+                                            type="text"
+                                            className="group-name-input"
+                                            placeholder="Nombre del grupo (Ej: Tipo de Leche)"
+                                            value={grupo.nombre}
+                                            onChange={(e) => actualizarCampoGrupoProd(grupo.id, 'nombre', e.target.value)}
+                                            style={{ flex: 1 }}
+                                        />
+                                        <button type="button" className="btn-delete-group" onClick={() => eliminarGrupoOpcionProd(grupo.id)} title="Eliminar este grupo">
+                                            <span className="material-symbols-outlined">delete</span>
+                                        </button>
+                                    </div>
+
+                                    {/* CONTROLES EXACTOS PARA LA DB: min_selecciones y max_selecciones */}
+                                    <div className="min-max-inputs">
+                                        <label>
+                                            Mínimo a elegir (0 = Opcional)
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                value={grupo.min_selecciones}
+                                                onChange={(e) => actualizarCampoGrupoProd(grupo.id, 'min_selecciones', parseInt(e.target.value) || 0)}
+                                            />
+                                        </label>
+                                        <label>
+                                            Máximo a elegir
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                value={grupo.max_selecciones}
+                                                onChange={(e) => actualizarCampoGrupoProd(grupo.id, 'max_selecciones', parseInt(e.target.value) || 1)}
+                                            />
+                                        </label>
+                                    </div>
+
+                                    <div className="option-items-list" style={{ marginTop: '15px' }}>
+                                        {grupo.opciones.map(opcion => (
+                                            <div key={opcion.id} className="option-item-row">
+                                                <input
+                                                    type="text"
+                                                    placeholder="Ej: Avena"
+                                                    value={opcion.nombre}
+                                                    onChange={(e) => actualizarOpcionProd(grupo.id, opcion.id, 'nombre', e.target.value)}
+                                                />
+                                                <div className="suplemento-wrapper">
+                                                    <span>+</span>
+                                                    <input
+                                                        type="number"
+                                                        step="0.01"
+                                                        placeholder="0.00"
+                                                        value={opcion.suplemento}
+                                                        onChange={(e) => actualizarOpcionProd(grupo.id, opcion.id, 'suplemento', e.target.value)}
+                                                    />
+                                                    <span>€</span>
+                                                </div>
+                                                <button type="button" className="btn-delete-option" onClick={() => eliminarOpcionProd(grupo.id, opcion.id)}>
+                                                    ×
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <button type="button" className="btn-add-option" onClick={() => agregarOpcionAGrupoProd(grupo.id)}>
+                                        + Añadir opción
+                                    </button>
+                                </div>
+                            ))}
+
+                            <button type="button" className="btn-add-group" onClick={agregarGrupoOpcionProd}>
+                                <span className="material-symbols-outlined">add_circle</span>
+                                Nuevo Grupo de Opciones
+                            </button>
+                        </div>
+
                         <div className="modal-footer">
                             <div style={{ display: 'flex', gap: '10px', width: '100%', justifyContent: 'flex-end', marginTop: '20px' }}>
                                 <button type="button" onClick={() => setEditandoProd(null)} className="btn-cancel">Cancelar</button>

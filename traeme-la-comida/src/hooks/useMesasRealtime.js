@@ -22,7 +22,7 @@ export const useMesasRealtime = () => {
             setSalas(validSalas);
 
             const dbSesiones = (sesiones || []).filter(s => s.estado !== 'Cerrada' && s.estado !== 'Completado');
-            const dbPedidos = (pedidos || []).filter(p => ['Recibido', 'En_preparacion', 'Listo_para_servir'].includes(p.estado));
+            const dbPedidos = (pedidos || []).filter(p => ['Recibido', 'En_preparacion', 'Listo_para_servir', 'Pedido_realizado'].includes(p.estado));
             
             if (!dbMesas) return;
 
@@ -64,6 +64,7 @@ export const useMesasRealtime = () => {
                     w: `${m.ancho}px`,
                     h: `${m.alto}px`,
                     necesitaCobro: sesionActiva?.estado === 'Pendiente_cobro',
+                    estadoSesion: sesionActiva?.estado,
                     metodoPago: null,
                     pedido: pedidoItems,
                     sesionId: sesionActiva?.id,

@@ -4,7 +4,6 @@ import { getMenuCliente } from '../services/apiMenuManager';
 import { submitOrder } from '../services/apiCliente';
 
 const VistaBarra = () => {
-    // --- 1. ESTADOS ---
     const [seccionActiva, setSeccionActiva] = useState('menu');
     const [filtroActivo, setFiltroActivo] = useState('Todo');
     const [carrito, setCarrito] = useState([]);
@@ -13,20 +12,16 @@ const VistaBarra = () => {
     const [esperandoCobro, setEsperandoCobro] = useState(false);
     const [numeroPedido, setNumeroPedido] = useState(null);
 
-    // Estados para el Modal del Producto
     const [productoModal, setProductoModal] = useState(null);
     const [opcionesElegidas, setOpcionesElegidas] = useState({});
     const [notaOpcional, setNotaOpcional] = useState("");
 
-    // --- NUEVOS ESTADOS: ASISTENTE DE VOZ ---
     const [estadoVoz, setEstadoVoz] = useState(null);
     const [mensajeVoz, setMensajeVoz] = useState("");
 
-    // --- 2. ESTADOS DE LA BASE DE DATOS SIMULADA ---
     const [menuData, setMenuData] = useState([]);
     const [cargandoMenu, setCargandoMenu] = useState(true);
 
-    // --- 2. LLAMADA A LA BASE DE DATOS (FETCH) ---
     useEffect(() => {
         const fetchMenu = async () => {
             const dataMenu = await getMenuCliente();
@@ -38,32 +33,70 @@ const VistaBarra = () => {
 
     const categoriasTabs = ['Todo', ...menuData.map(c => c.nombre)];
 
-    // --- 3. FUNCIONES DE PRODUCTO Y CARRITO ---
     const abrirModalProducto = (prod, categoria) => {
         if (pagoSolicitado || esperandoCobro) return;
         const seleccionesIniciales = {};
-        categoria.gruposOpciones?.forEach(grupo => {
-            if (grupo.opciones.length > 0) seleccionesIniciales[grupo.id] = grupo.opciones[0];
+
+        // CAMBIO: Leemos los grupos de opciones del producto
+        prod.gruposOpciones?.forEach(grupo => {
+            seleccionesIniciales[grupo.id] = [];
         });
+
         setOpcionesElegidas(seleccionesIniciales);
         setNotaOpcional("");
         setProductoModal({ prod, categoria });
     };
 
-    const manejarSeleccionOpcion = (grupoId, opcion) => {
-        setOpcionesElegidas({ ...opcionesElegidas, [grupoId]: opcion });
+    const manejarSeleccionOpcion = (grupoId, opcion, max) => {
+        const seleccionesActuales = opcionesElegidas[grupoId] || [];
+        const yaSeleccionada = seleccionesActuales.find(o => o.id === opcion.id);
+
+        if (max === 1) {
+            setOpcionesElegidas({ ...opcionesElegidas, [grupoId]: [opcion] });
+        } else {
+            if (yaSeleccionada) {
+                setOpcionesElegidas({
+                    ...opcionesElegidas,
+                    [grupoId]: seleccionesActuales.filter(o => o.id !== opcion.id)
+                });
+            } else {
+                if (seleccionesActuales.length < max) {
+                    setOpcionesElegidas({
+                        ...opcionesElegidas,
+                        [grupoId]: [...seleccionesActuales, opcion]
+                    });
+                } else {
+                    alert(`Solo puedes seleccionar un máximo de ${max} opciones.`);
+                }
+            }
+        }
     };
 
     const calcularPrecioFinalItem = () => {
         if (!productoModal) return 0;
         let total = productoModal.prod.precio;
-        Object.values(opcionesElegidas).forEach(opcion => total += opcion.suplemento);
+        Object.values(opcionesElegidas).forEach(grupoSelecciones => {
+            grupoSelecciones.forEach(opcion => total += opcion.suplemento);
+        });
         return total;
     };
 
+    const validarSelecciones = () => {
+        if (!productoModal) return false;
+        // VALIDANDO MIN Y MAX DE LA RELACIÓN
+        return productoModal.prod.gruposOpciones?.every(grupo => {
+            const numSeleccionadas = opcionesElegidas[grupo.id]?.length || 0;
+            return numSeleccionadas >= (grupo.min_selecciones || 0) && numSeleccionadas <= (grupo.max_selecciones || 100);
+        }) ?? true;
+    };
+
     const confirmarAgregarAlCarrito = () => {
+        if (!validarSelecciones()) {
+            alert("Por favor, selecciona las opciones requeridas.");
+            return;
+        }
         const precioFinal = calcularPrecioFinalItem();
-        const resumenOpciones = Object.values(opcionesElegidas).map(opt => ({
+        const resumenOpciones = Object.values(opcionesElegidas).flat().map(opt => ({
             opcionSeleccionada: { id: opt.id, nombre: opt.nombre, suplemento: opt.suplemento }
         }));
         setCarrito([...carrito, {
@@ -82,7 +115,6 @@ const VistaBarra = () => {
         setCarrito(carrito.filter((_, index) => index !== indexAEliminar));
     };
 
-    // --- 4. FUNCIONES DE PAGO ---
     const gestionarPago = async (tipo) => {
         if (carrito.length === 0) return;
 
@@ -98,20 +130,14 @@ const VistaBarra = () => {
 
             try {
                 if (tipo === 'digital') {
-                    // Pago instantáneo -> El cliente "paga su carrito virtual". Simulamos.
-                    // Para la DB, si es digital el pedido ya nace pagado si quisiéramos o 'Recibido' directo.
-                    // Según apiCliente y nuestro db architecture actual, se envía 'Recibido'.
                     await submitOrder(null, true, n_pedido_barra, itemsPorEnviar);
-                    
+
                     const carritoEnviado = carrito.map(item => ({ ...item, enviado: true }));
                     setCarrito(carritoEnviado);
                     setNumeroPedido(n_pedido_barra);
                     setPagoSolicitado(true);
                 } else {
-                    // Solicitud en vivo de efectivo
                     await submitOrder(null, true, n_pedido_barra, itemsPorEnviar);
-                    // Queda en la pantalla de espera de cobro (que lo gestionaría el camarero cerrando sesión en la otra vista, para la barra el camarero lo cambia de Pendiente->Recibido, etc.)
-                    // Lo dejamos en "esperando cobro"
                     setNumeroPedido(n_pedido_barra);
                     setEsperandoCobro(true);
                 }
@@ -130,7 +156,6 @@ const VistaBarra = () => {
         setPagoSolicitado(true);
     };
 
-    // --- 5. LÓGICA: SIMULACIÓN DE ASISTENTE DE VOZ ---
     const iniciarEscuchaVoz = () => {
         setEstadoVoz('escuchando');
         setMensajeVoz("Dime qué quieres pedir...");
@@ -175,7 +200,6 @@ const VistaBarra = () => {
 
     const totalPrecioCarrito = carrito.reduce((acc, item) => acc + item.precioFinal, 0);
 
-    // --- PANTALLA DE CARGA ---
     if (cargandoMenu) {
         return (
             <div className="vb-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -320,7 +344,6 @@ const VistaBarra = () => {
                                     )}
                                 </div>
 
-                                {/* LÓGICA DE PANTALLAS DE PAGO */}
                                 {esperandoCobro ? (
                                     <div className="vb-espera-card">
                                         <span className="material-symbols-outlined icon-large">hourglass_empty</span>
@@ -401,9 +424,7 @@ const VistaBarra = () => {
                 )}
             </div>
 
-            {/* =========================================================
-                MODAL DE PRODUCTO (BOTTOM SHEET)
-            ========================================================= */}
+            {/* MODAL DE PRODUCTO */}
             {productoModal && (
                 <>
                     <div className="vb-modal-backdrop" onClick={() => setProductoModal(null)}></div>
@@ -422,31 +443,51 @@ const VistaBarra = () => {
                         </div>
 
                         <div className="vb-sheet-content">
-                            {productoModal.categoria.gruposOpciones?.map(grupo => (
-                                <div key={grupo.id} className="vb-option-group">
-                                    <h4 className="vb-group-title">{grupo.nombre} <span className="vb-req-badge">Requerido</span></h4>
-                                    <div className="vb-options-list">
-                                        {grupo.opciones.map(opcion => {
-                                            const isSelected = opcionesElegidas[grupo.id]?.id === opcion.id;
-                                            return (
-                                                <div
-                                                    key={opcion.id}
-                                                    className={`vb-option-row ${isSelected ? 'selected' : ''}`}
-                                                    onClick={() => manejarSeleccionOpcion(grupo.id, opcion)}
-                                                >
-                                                    <div className="vb-radio-custom">
-                                                        {isSelected && <div className="vb-radio-dot"></div>}
+                            {productoModal.prod.gruposOpciones?.map(grupo => {
+                                const numSeleccionadas = opcionesElegidas[grupo.id]?.length || 0;
+                                const esValido = numSeleccionadas >= (grupo.min_selecciones || 0) && numSeleccionadas <= (grupo.max_selecciones || 100);
+
+                                return (
+                                    <div key={grupo.id} className="vb-option-group">
+                                        <h4 className="vb-group-title">
+                                            {grupo.nombre}
+                                            {grupo.min_selecciones > 0 ? (
+                                                <span className={`vb-req-badge ${esValido ? 'valido' : 'pendiente'}`}>
+                                                    {numSeleccionadas < grupo.min_selecciones
+                                                        ? `Selecciona al menos ${grupo.min_selecciones}`
+                                                        : `Mínimo cumplido (${numSeleccionadas})`}
+                                                </span>
+                                            ) : (
+                                                <span className="vb-opt-badge">Opcional (máx {grupo.max_selecciones})</span>
+                                            )}
+                                        </h4>
+                                        <div className="vb-options-list">
+                                            {grupo.opciones.map(opcion => {
+                                                const isSelected = opcionesElegidas[grupo.id]?.some(o => o.id === opcion.id);
+                                                return (
+                                                    <div
+                                                        key={opcion.id}
+                                                        className={`vb-option-row ${isSelected ? 'selected' : ''}`}
+                                                        onClick={() => manejarSeleccionOpcion(grupo.id, opcion, grupo.max_selecciones)}
+                                                    >
+                                                        <div className={grupo.max_selecciones === 1 ? "vb-radio-custom" : "vb-checkbox-custom"}>
+                                                            {isSelected && (
+                                                                grupo.max_selecciones === 1
+                                                                    ? <div className="vb-radio-dot"></div>
+                                                                    : <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>check</span>
+                                                            )}
+                                                        </div>
+                                                        <span className="vb-option-name">{opcion.nombre}</span>
+                                                        {opcion.suplemento > 0 && (
+                                                            <span className="vb-option-sup">+{opcion.suplemento.toFixed(2)}€</span>
+                                                        )}
                                                     </div>
-                                                    <span className="vb-option-name">{opcion.nombre}</span>
-                                                    {opcion.suplemento > 0 && (
-                                                        <span className="vb-option-sup">+{opcion.suplemento.toFixed(2)}€</span>
-                                                    )}
-                                                </div>
-                                            );
-                                        })}
+                                                );
+                                            })}
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
 
                             <div className="vb-option-group">
                                 <h4 className="vb-group-title">Notas adicionales</h4>
@@ -460,22 +501,23 @@ const VistaBarra = () => {
                         </div>
 
                         <div className="vb-sheet-footer">
-                            <button className="vb-btn-carrito" onClick={confirmarAgregarAlCarrito}>
-                                Añadir al carrito • {calcularPrecioFinalItem().toFixed(2)}€
+                            <button
+                                className={`vb-btn-carrito ${!validarSelecciones() ? 'disabled' : ''}`}
+                                onClick={confirmarAgregarAlCarrito}
+                                disabled={!validarSelecciones()}
+                            >
+                                {validarSelecciones()
+                                    ? `Añadir al carrito • ${calcularPrecioFinalItem().toFixed(2)}€`
+                                    : 'Completa las opciones requeridas'}
                             </button>
                         </div>
                     </div>
                 </>
             )}
 
-            {/* =========================================================
-                NUEVO MODAL ASISTENTE DE VOZ (PANTALLA COMPLETA)
-            ========================================================= */}
             {estadoVoz && (
                 <div className="vb-voz-overlay">
                     <div className="vb-voz-content">
-
-                        {/* ESTADO 1: ESCUCHANDO */}
                         {estadoVoz === 'escuchando' && (
                             <>
                                 <h2>{mensajeVoz}</h2>
@@ -488,8 +530,6 @@ const VistaBarra = () => {
                                 <button className="vb-btn-voz-close" onClick={cancelarVoz}>Cancelar</button>
                             </>
                         )}
-
-                        {/* ESTADO 2: PROCESANDO */}
                         {estadoVoz === 'procesando' && (
                             <>
                                 <span className="material-symbols-outlined vb-icon-spin">autorenew</span>
@@ -497,8 +537,6 @@ const VistaBarra = () => {
                                 <p className="vb-voz-hint">Analizando pedido con IA...</p>
                             </>
                         )}
-
-                        {/* ESTADO 3: ÉXITO */}
                         {estadoVoz === 'exito' && (
                             <>
                                 <span className="material-symbols-outlined vb-icon-success">check_circle</span>
@@ -506,8 +544,6 @@ const VistaBarra = () => {
                                 <p className="vb-voz-hint">{mensajeVoz}</p>
                             </>
                         )}
-
-                        {/* ESTADO 4: ERROR */}
                         {estadoVoz === 'error' && (
                             <>
                                 <span className="material-symbols-outlined vb-icon-error">error</span>
