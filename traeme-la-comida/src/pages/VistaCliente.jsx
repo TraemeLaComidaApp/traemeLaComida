@@ -2,7 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import './VistaCliente.css';
 import { getMenuCliente } from '../services/apiMenuManager';
-import { submitOrder, getMesaByUuid, solicitarPago as solicitarPagoApi, llamarCamarero as llamarCamareroApi } from '../services/apiCliente';
+import { 
+    submitOrder, 
+    getMesaByUuid, 
+    solicitarPago as solicitarPagoApi, 
+    llamarCamarero as llamarCamareroApi,
+    getSesionActiva,
+    getDetallesSesion,
+    registrarPago,
+    actualizarEstadoDetalle,
+    finalizarSesion
+} from '../services/apiCliente';
+import { getConfiguracionLocal } from '../services/apiAuth';
 
 const VistaCliente = () => {
     const { uuid } = useParams();
@@ -25,9 +36,12 @@ const VistaCliente = () => {
     const [modalPago, setModalPago] = useState(null);
     const [tipoDivision, setTipoDivision] = useState('todo');
     const [itemsSeleccionadosPago, setItemsSeleccionadosPago] = useState([]);
+    const [modoSeleccionPago, setModoSeleccionPago] = useState(false);
 
     const [estadoVoz, setEstadoVoz] = useState(null);
     const [mensajeVoz, setMensajeVoz] = useState("");
+
+    const [configNegocio, setConfigNegocio] = useState({ nombre_local: 'Cargando...', logo_url: null });
 
     useEffect(() => {
         const resolveMesa = async () => {
@@ -48,6 +62,14 @@ const VistaCliente = () => {
             setCargandoMenu(false);
         };
         fetchMenu();
+
+        const fetchConfig = async () => {
+            const config = await getConfiguracionLocal();
+            if (config) {
+                setConfigNegocio(config);
+            }
+        };
+        fetchConfig();
     }, []);
 
     const categoriasTabs = ['Todo', ...menuData.map(c => c.nombre)];
@@ -171,38 +193,42 @@ const VistaCliente = () => {
             .map(({ index }) => index);
 
         if (indicesPagables.length === 0) {
-            if (carrito.some(item => !item.enviado)) {
-                alert("Primero debes enviar los artículos a cocina para poder pagarlos.");
-            } else {
-                alert("No hay artículos pendientes de pago.");
-            }
+            alert("No hay artículos pendientes de pago.");
             return;
         }
 
-        if (carrito.some(item => !item.enviado && !item.estadoPago)) {
-            const confirmar = window.confirm("Tienes artículos sin enviar a cocina. Solo se cobrarán los que ya están en cocina. ¿Deseas continuar?");
-            if (!confirmar) return;
-        }
-
-        // Para pago en mesa, lo hacemos directo
-        if (metodo === 'mesa') {
-            if (window.confirm("¿Confirmas que deseas pagar en mesa? Avisaremos al camarero.")) {
-                // Seteamos los items a pagar
-                setItemsSeleccionadosPago(indicesPagables);
-                // Llamamos a confirmar directamente con el método
-                await ejecutarPagoMesa(indicesPagables);
+        if (modoSeleccionPago) {
+            if (itemsSeleccionadosPago.length === 0) {
+                alert("Por favor, selecciona al menos un artículo para pagar.");
+                return;
+            }
+            if (metodo === 'mesa') {
+                if (window.confirm("¿Confirmas que deseas pagar los artículos seleccionados en mesa?")) {
+                    await ejecutarPagoMesa(itemsSeleccionadosPago);
+                }
+            } else {
+                if (window.confirm(`¿Proceder al pago digital de los artículos seleccionados con ${metodo === 'bizum' ? 'Bizum' : 'Google Pay'}?`)) {
+                    await ejecutarPagoDigital(itemsSeleccionadosPago, metodo);
+                }
             }
         } else {
-            // Para otros métodos (digitales), por ahora también simulamos éxito directo 
-            // ya que no hay pasarela integrada aún.
-            if (window.confirm(`¿Proceder al pago con ${metodo === 'bizum' ? 'Bizum' : 'Google Pay'}?`)) {
-                setItemsSeleccionadosPago(indicesPagables);
-                await ejecutarPagoDigital(indicesPagables, metodo);
+            // Ofrecer pagar todo o seleccionar
+            if (window.confirm("¿Deseas pagar todos los artículos pendientes?")) {
+                if (metodo === 'mesa') {
+                    await ejecutarPagoMesa(indicesPagables);
+                } else {
+                    await ejecutarPagoDigital(indicesPagables, metodo);
+                }
+            } else {
+                setModoSeleccionPago(true);
+                setItemsSeleccionadosPago([]);
+                alert("Selecciona los productos que deseas pagar de la lista.");
             }
         }
     };
 
     const ejecutarPagoMesa = async (indices) => {
+        const monto = indices.reduce((acc, i) => acc + carrito[i].precioFinal, 0);
         const nuevoCarrito = carrito.map((item, index) => {
             if (indices.includes(index)) {
                 return { ...item, estadoPago: 'solicitado_mesa' };
@@ -213,24 +239,50 @@ const VistaCliente = () => {
         
         if (mesa) {
             try {
-                await solicitarPagoApi(mesa.id);
+                // Notificamos al el backend
+                await solicitarPagoApi(mesa.id, metodoPagoMesa === 'card' ? 'Tarjeta' : 'Efectivo');
+                // Aquí podríamos registrar un pago con estado 'solicitado' si el schema lo permite
             } catch (err) {
                 console.error("Error solicitando pago:", err);
             }
         }
         setItemsSeleccionadosPago([]);
+        setModoSeleccionPago(false);
     };
 
     const ejecutarPagoDigital = async (indices, metodo) => {
+        const monto = indices.reduce((acc, i) => acc + carrito[i].precioFinal, 0);
         const nuevoCarrito = carrito.map((item, index) => {
             if (indices.includes(index)) {
                 return { ...item, estadoPago: 'pagado' };
             }
             return item;
         });
+        
+        if (mesa) {
+            try {
+                const sesion = await getSesionActiva(mesa.id);
+                if (sesion) {
+                    await registrarPago(sesion.id, monto, metodo);
+                    // Opcional: Marcar los detalles como pagados en el backend
+                }
+            } catch (err) {
+                console.error("Error registrando pago digital:", err);
+            }
+        }
+
         setCarrito(nuevoCarrito);
         setItemsSeleccionadosPago([]);
+        setModoSeleccionPago(false);
         setModalPago(null); 
+
+        // Verificar si todo está pagado para cerrar sesión
+        if (nuevoCarrito.every(item => item.estadoPago === 'pagado')) {
+            const sesion = await getSesionActiva(mesa.id);
+            if (sesion) {
+                await finalizarSesion(sesion.id, mesa.id);
+            }
+        }
     };
 
     const confirmarPagoFinal = async () => {
@@ -259,7 +311,7 @@ const VistaCliente = () => {
         setItemsSeleccionadosPago([]);
     };
 
-    const simularCobroCamarero = () => {
+    const simularCobroCamarero = async () => {
         const nuevoCarrito = carrito.map(item => {
             if (item.estadoPago === 'solicitado_mesa') {
                 return { ...item, estadoPago: 'pagado' };
@@ -267,6 +319,13 @@ const VistaCliente = () => {
             return item;
         });
         setCarrito(nuevoCarrito);
+
+        if (nuevoCarrito.every(item => item.estadoPago === 'pagado')) {
+            const sesion = await getSesionActiva(mesa.id);
+            if (sesion) {
+                await finalizarSesion(sesion.id, mesa.id);
+            }
+        }
     };
 
     const iniciarEscuchaVoz = () => {
@@ -351,9 +410,13 @@ const VistaCliente = () => {
             <div className={`vista-cliente-container ${(productoModal || estadoVoz) ? 'no-scroll' : ''}`}>
                 <header className="vc-header">
                     <div className="vc-header-icon">
-                        <span className="material-symbols-outlined">coffee</span>
+                        {configNegocio.logo_url ? (
+                            <img src={configNegocio.logo_url} alt="Logo" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                        ) : (
+                            <span className="material-symbols-outlined">restaurant</span>
+                        )}
                     </div>
-                    <h2>Morning Break</h2>
+                    <h2>{configNegocio.nombre_local}</h2>
                 </header>
 
                 <nav className="vc-nav">
@@ -433,20 +496,36 @@ const VistaCliente = () => {
                                         <div key={i} className={`vc-pedido-item ${item.estadoPago ? 'enviado' : (item.enviado ? 'enviado' : '')}`}>
                                             <div className="vc-pedido-content">
                                                 <div className="vc-pedido-header">
-                                                    <div>
-                                                        <span className="vc-pedido-name">
-                                                            {item.nombre}
-                                                            {item.estadoPago === 'pagado' ? (
-                                                                <small style={{ color: '#34a853', marginLeft: '5px' }}>✅ PAGADO</small>
-                                                            ) : item.estadoPago === 'solicitado_mesa' ? (
-                                                                <small style={{ color: '#3b82f6', marginLeft: '5px' }}>⏳ ESPERANDO COBRO</small>
-                                                            ) : (
-                                                                item.enviado && <small style={{ color: '#ec9213', marginLeft: '5px' }}>👨‍🍳 EN COCINA</small>
-                                                            )}
-                                                        </span>
-                                                        <span className="vc-pedido-price">{item.precioFinal.toFixed(2)}€</span>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%' }}>
+                                                        {modoSeleccionPago && item.enviado && !item.estadoPago && (
+                                                            <input 
+                                                                type="checkbox" 
+                                                                checked={itemsSeleccionadosPago.includes(i)}
+                                                                onChange={(e) => {
+                                                                    if (e.target.checked) {
+                                                                        setItemsSeleccionadosPago([...itemsSeleccionadosPago, i]);
+                                                                    } else {
+                                                                        setItemsSeleccionadosPago(itemsSeleccionadosPago.filter(idx => idx !== i));
+                                                                    }
+                                                                }}
+                                                                className="vc-checkbox-pago"
+                                                            />
+                                                        )}
+                                                        <div style={{ flex: 1 }}>
+                                                            <span className="vc-pedido-name">
+                                                                {item.nombre}
+                                                                {item.estadoPago === 'pagado' ? (
+                                                                    <small style={{ color: '#34a853', marginLeft: '5px' }}>✅ PAGADO</small>
+                                                                ) : item.estadoPago === 'solicitado_mesa' ? (
+                                                                    <small style={{ color: '#3b82f6', marginLeft: '5px' }}>⏳ ESPERANDO COBRO</small>
+                                                                ) : (
+                                                                    item.enviado && <small style={{ color: '#ec9213', marginLeft: '5px' }}>👨‍🍳 EN COCINA</small>
+                                                                )}
+                                                            </span>
+                                                            <span className="vc-pedido-price">{item.precioFinal.toFixed(2)}€</span>
+                                                        </div>
                                                     </div>
-                                                    {!item.enviado && !item.estadoPago && (
+                                                    {!item.enviado && !item.estadoPago && !modoSeleccionPago && (
                                                         <button className="vc-btn-eliminar" onClick={() => eliminarDelCarrito(i)}>
                                                             <span className="material-symbols-outlined">close</span>
                                                         </button>

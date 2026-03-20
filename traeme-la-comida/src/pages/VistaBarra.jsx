@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './VistaBarra.css';
 import { getMenuCliente } from '../services/apiMenuManager';
 import { submitOrder } from '../services/apiCliente';
+import { getConfiguracionLocal } from '../services/apiAuth';
 
 const VistaBarra = () => {
     const [seccionActiva, setSeccionActiva] = useState('menu');
@@ -22,6 +23,8 @@ const VistaBarra = () => {
     const [menuData, setMenuData] = useState([]);
     const [cargandoMenu, setCargandoMenu] = useState(true);
 
+    const [configNegocio, setConfigNegocio] = useState({ nombre_local: 'Cargando...', logo_url: null });
+
     useEffect(() => {
         const fetchMenu = async () => {
             const dataMenu = await getMenuCliente();
@@ -29,6 +32,14 @@ const VistaBarra = () => {
             setCargandoMenu(false);
         };
         fetchMenu();
+
+        const fetchConfig = async () => {
+            const config = await getConfiguracionLocal();
+            if (config) {
+                setConfigNegocio(config);
+            }
+        };
+        fetchConfig();
     }, []);
 
     const categoriasTabs = ['Todo', ...menuData.map(c => c.nombre)];
@@ -219,9 +230,13 @@ const VistaBarra = () => {
             <div className={`vb-main-wrapper ${(productoModal || estadoVoz) ? 'no-scroll' : ''}`}>
                 <header className="vb-header">
                     <div className="vb-header-icon">
-                        <span className="material-symbols-outlined">coffee</span>
+                        {configNegocio.logo_url ? (
+                            <img src={configNegocio.logo_url} alt="Logo" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                        ) : (
+                            <span className="material-symbols-outlined">restaurant</span>
+                        )}
                     </div>
-                    <h2>Morning Break (Barra)</h2>
+                    <h2>{configNegocio.nombre_local} (Barra)</h2>
                 </header>
 
                 <nav className="vb-nav">

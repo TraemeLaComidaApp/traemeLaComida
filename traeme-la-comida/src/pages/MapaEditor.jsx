@@ -143,13 +143,32 @@ const MapaEditor = () => {
         <div className="mapa-editor-main">
             <div className="mapa-editor-tabs no-scrollbar">
                 {salas.map(sTab => (
-                    <button
-                        key={sTab.id}
-                        className={`tab-btn ${salaActivaId === sTab.id ? 'active' : ''}`}
-                        onClick={() => setSalaActivaId(sTab.id)}
-                    >
-                        {sTab.nombre}
-                    </button>
+                    <div key={sTab.id} className="tab-wrapper" style={{ display: 'flex', alignItems: 'center' }}>
+                        <button
+                            className={`tab-btn ${salaActivaId === sTab.id ? 'active' : ''}`}
+                            onClick={() => setSalaActivaId(sTab.id)}
+                        >
+                            {sTab.nombre}
+                        </button>
+                        <button 
+                            className="btn-tab-delete"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (salas.length > 1 && window.confirm(`¿Seguro que quieres eliminar la sala "${sTab.nombre}" y todos sus elementos?`)) {
+                                    const nuevasSalas = salas.filter(s => s.id !== sTab.id);
+                                    setSalas(nuevasSalas);
+                                    if (salaActivaId === sTab.id) {
+                                        setSalaActivaId(nuevasSalas[0].id);
+                                    }
+                                } else if (salas.length === 1) {
+                                    alert("No puedes eliminar la última sala.");
+                                }
+                            }}
+                            style={{ marginLeft: '-15px', marginRight: '10px', background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}
+                        >
+                            ✕
+                        </button>
+                    </div>
                 ))}
                 <button
                     className="tab-btn-add"

@@ -83,20 +83,87 @@ export const submitOrder = async (mesaId, esBarra, numeroPedidoBarra, carrito, c
 };
 
 /**
+ * Get active session for a mesa
+ */
+export const getSesionActiva = async (mesaId) => {
+    const sesiones = await fetchApi('/sesion') || [];
+    return sesiones.find(s => s.id_mesa == mesaId && s.estado !== 'Cerrada' && s.estado !== 'Completado');
+};
+
+/**
+ * Get all order details (items) for a session
+ */
+export const getDetallesSesion = async (sesionId) => {
+    // We first get all pedidos for this session
+    const pedidos = await fetchApi('/pedido') || [];
+    const pedidosSesion = pedidos.filter(p => p.id_sesion === sesionId);
+    
+    // Then get all detalles for those pedidos
+    const todosDetalles = await fetchApi('/detalle-pedido') || [];
+    return todosDetalles.filter(d => pedidosSesion.some(p => p.id === d.id_pedido));
+};
+
+/**
+ * Mark a specific item as paid (or update its status)
+ */
+export const actualizarEstadoDetalle = async (detalleId, nuevoEstado) => {
+    return await fetchApi(`/detalle-pedido/${detalleId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ estado: nuevoEstado })
+    });
+};
+
+/**
+ * Register a payment in the database
+ */
+export const registrarPago = async (sesionId, monto, metodo) => {
+    return await fetchApi('/pago', {
+        method: 'POST',
+        body: JSON.stringify({
+            id_sesion: sesionId,
+            monto_pagado: monto,
+            metodo: metodo,
+            fecha_pago: new Date().toISOString()
+        })
+    });
+};
+
+/**
  * Update session state to request payment
  */
-export const solicitarPago = async (mesaId) => {
-    const sesiones = await fetchApi('/sesion') || [];
-    // Usamos == para permitir comparación de string/number si fuera el caso, 
-    // y ampliamos estados para encontrar la sesión actual.
-    const sesionActiva = sesiones.find(s => s.id_mesa == mesaId && s.estado !== 'Cerrada' && s.estado !== 'Completado');
+export const solicitarPago = async (mesaId, metodo = 'Efectivo') => {
+    const sesionActiva = await getSesionActiva(mesaId);
     if (sesionActiva) {
         await fetchApi(`/sesion/${sesionActiva.id}`, {
             method: 'PATCH',
             body: JSON.stringify({ estado: 'Pendiente_cobro' })
         });
-    } else {
-        console.warn("No active session found for mesaId:", mesaId);
+        // We could also store the preferred method if the schema allowed it, 
+        // but for now we follow the existing pattern.
+    }
+};
+
+/**
+ * Finalize session and regenerate mesa UUID
+ */
+export const finalizarSesion = async (sesionId, mesaId) => {
+    const { generateUuid } = await import('../utils/uuid');
+    
+    // Close session
+    await fetchApi(`/sesion/${sesionId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ 
+            estado: 'Cerrada', 
+            fecha_fin: new Date().toISOString() 
+        })
+    });
+
+    // Invalidate QR by changing mesa UUID
+    if (mesaId) {
+        await fetchApi(`/mesa/${mesaId}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ uuid: generateUuid() })
+        });
     }
 };
 
@@ -104,14 +171,11 @@ export const solicitarPago = async (mesaId) => {
  * Update session state to call for assistance
  */
 export const llamarCamarero = async (mesaId) => {
-    const sesiones = await fetchApi('/sesion') || [];
-    const sesionActiva = sesiones.find(s => s.id_mesa == mesaId && s.estado !== 'Cerrada' && s.estado !== 'Completado');
+    const sesionActiva = await getSesionActiva(mesaId);
     if (sesionActiva) {
         await fetchApi(`/sesion/${sesionActiva.id}`, {
             method: 'PATCH',
             body: JSON.stringify({ estado: 'Peticion_asistencia' })
         });
-    } else {
-        console.warn("No active session found for mesaId:", mesaId);
     }
 };
