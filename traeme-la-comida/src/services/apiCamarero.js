@@ -10,7 +10,7 @@ export const añadirAComanda = async (mesaId, sesionId, pedidoId, producto) => {
             method: 'POST',
             body: JSON.stringify({
                 id_mesa: mesaId,
-                estado: 'Por_defecto',
+                estado: 'activa',
                 fecha_inicio: new Date().toISOString()
             })
         });
@@ -76,12 +76,12 @@ export const cobrarYFinalizarMesa = async (sesionId, pedidoId, mesaId, totalCalc
 
     await fetchApi(`/pedido/${pedidoId}`, {
         method: 'PATCH',
-        body: JSON.stringify({ estado: 'Completado' })
+        body: JSON.stringify({ estado: 'Entregado' })
     });
 
     await fetchApi(`/sesion/${sesionId}`, {
         method: 'PATCH',
-        body: JSON.stringify({ estado: 'Cerrada', fecha_fin: new Date().toISOString() })
+        body: JSON.stringify({ estado: 'cerrada', fecha_fin: new Date().toISOString() })
     });
 
     // Regenerate UUID so the table's QR link is invalidated after payment
