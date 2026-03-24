@@ -7,11 +7,11 @@ import {
     getMesaByUuid, 
     solicitarPago as solicitarPagoApi, 
     llamarCamarero as llamarCamareroApi,
-    getSesionActiva,
-    getDetallesSesion,
+    getPedidoActivo,
+    getDetallesPedido,
     registrarPago,
     actualizarEstadoDetalle,
-    finalizarSesion
+    finalizarPedido
 } from '../services/apiCliente';
 import { getConfiguracionLocal } from '../services/apiAuth';
 
@@ -261,9 +261,9 @@ const VistaCliente = () => {
         
         if (mesa) {
             try {
-                const sesion = await getSesionActiva(mesa.id);
-                if (sesion) {
-                    await registrarPago(sesion.id, monto, metodo);
+                const pedido = await getPedidoActivo(mesa.id);
+                if (pedido) {
+                    await registrarPago(pedido.id, monto, metodo);
                     // Opcional: Marcar los detalles como pagados en el backend
                 }
             } catch (err) {
@@ -278,9 +278,9 @@ const VistaCliente = () => {
 
         // Verificar si todo está pagado para cerrar sesión
         if (nuevoCarrito.every(item => item.estadoPago === 'pagado')) {
-            const sesion = await getSesionActiva(mesa.id);
-            if (sesion) {
-                await finalizarSesion(sesion.id, mesa.id);
+            const pedido = await getPedidoActivo(mesa.id);
+            if (pedido) {
+                await finalizarPedido(pedido.id, mesa.id);
             }
         }
     };
@@ -321,9 +321,9 @@ const VistaCliente = () => {
         setCarrito(nuevoCarrito);
 
         if (nuevoCarrito.every(item => item.estadoPago === 'pagado')) {
-            const sesion = await getSesionActiva(mesa.id);
-            if (sesion) {
-                await finalizarSesion(sesion.id, mesa.id);
+            const pedido = await getPedidoActivo(mesa.id);
+            if (pedido) {
+                await finalizarPedido(pedido.id, mesa.id);
             }
         }
     };

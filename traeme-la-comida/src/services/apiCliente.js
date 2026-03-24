@@ -9,42 +9,43 @@ export const getMesaByUuid = async (uuid) => {
 };
 
 export const submitOrder = async (mesaId, esBarra, numeroPedidoBarra, carrito, callbackExit) => {
-    let currentSesionId = null;
+    let currentPedidoId = null;
 
     if (mesaId) {
-        const sesiones = await fetchApi('/sesion') || [];
-        // Consider an active session if it's not logically closed or complete based on available state
-        const sesionActiva = sesiones.find(s => s.id_mesa === mesaId && s.estado !== 'Cerrada' && s.estado !== 'Completado');
+        const pedidos = await fetchApi('/pedido') || [];
+        // Consider an active order if it's not closed
+        const pedidoActivo = pedidos.find(p => p.id_mesa === mesaId && p.estado !== 'cerrado');
 
-        if (sesionActiva) {
-            currentSesionId = sesionActiva.id;
+        if (pedidoActivo) {
+            currentPedidoId = pedidoActivo.id;
         } else {
-            const newSesion = await fetchApi('/sesion', {
+            const pedidoPayload = {
+                id_mesa: mesaId,
+                es_barra: esBarra || false,
+                estado: 'recibido',
+                creado_at: new Date().toISOString()
+            };
+
+            const nuevoPedido = await fetchApi('/pedido', {
                 method: 'POST',
-                body: JSON.stringify({
-                    id_mesa: mesaId,
-                    estado: 'Pedido_realizado',
-                    fecha_inicio: new Date().toISOString()
-                })
+                body: JSON.stringify(pedidoPayload)
             });
-            currentSesionId = newSesion.id;
+            currentPedidoId = nuevoPedido.id;
         }
+    } else {
+        // If no mesaId (shouldn't happen in normal flow but keeping structure)
+        const pedidoPayload = {
+            id_mesa: null, // this will fail backend validation if not handled, but keeping structure
+            es_barra: esBarra || false,
+            estado: 'recibido',
+            creado_at: new Date().toISOString()
+        };
+        const nuevoPedido = await fetchApi('/pedido', {
+            method: 'POST',
+            body: JSON.stringify(pedidoPayload)
+        });
+        currentPedidoId = nuevoPedido.id;
     }
-
-    const pedidoPayload = {
-        id_sesion: currentSesionId,
-        es_barra: esBarra || false,
-        estado: 'Recibido',
-        creado_at: new Date().toISOString()
-    };
-
-    // Some backend endpoints ignore unknown keys, we avoid passing num_pedido_barra if it wasn't in CreatePedidoDto
-    // but just in case we can safely keep to Swagger spec.
-    const pedidoC = await fetchApi('/pedido', {
-        method: 'POST',
-        body: JSON.stringify(pedidoPayload)
-    });
-    const currentPedidoId = pedidoC.id;
 
     for (const item of carrito) {
         const extraSum = item.extrasAplicados ? item.extrasAplicados.reduce((s, e) => s + (e.opcionSeleccionada?.suplemento || 0), 0) : 0;
@@ -83,24 +84,19 @@ export const submitOrder = async (mesaId, esBarra, numeroPedidoBarra, carrito, c
 };
 
 /**
- * Get active session for a mesa
+ * Get active pedido for a mesa
  */
-export const getSesionActiva = async (mesaId) => {
-    const sesiones = await fetchApi('/sesion') || [];
-    return sesiones.find(s => s.id_mesa == mesaId && s.estado !== 'Cerrada' && s.estado !== 'Completado');
+export const getPedidoActivo = async (mesaId) => {
+    const pedidos = await fetchApi('/pedido') || [];
+    return pedidos.find(p => p.id_mesa === mesaId && p.estado !== 'cerrado');
 };
 
 /**
- * Get all order details (items) for a session
+ * Get all order details (items) for a pedido
  */
-export const getDetallesSesion = async (sesionId) => {
-    // We first get all pedidos for this session
-    const pedidos = await fetchApi('/pedido') || [];
-    const pedidosSesion = pedidos.filter(p => p.id_sesion === sesionId);
-    
-    // Then get all detalles for those pedidos
+export const getDetallesPedido = async (pedidoId) => {
     const todosDetalles = await fetchApi('/detalle-pedido') || [];
-    return todosDetalles.filter(d => pedidosSesion.some(p => p.id === d.id_pedido));
+    return todosDetalles.filter(d => d.id_pedido === pedidoId);
 };
 
 /**
@@ -116,11 +112,11 @@ export const actualizarEstadoDetalle = async (detalleId, nuevoEstado) => {
 /**
  * Register a payment in the database
  */
-export const registrarPago = async (sesionId, monto, metodo) => {
+export const registrarPago = async (pedidoId, monto, metodo) => {
     return await fetchApi('/pago', {
         method: 'POST',
         body: JSON.stringify({
-            id_sesion: sesionId,
+            id_pedido: pedidoId,
             monto_pagado: monto,
             metodo: metodo,
             fecha_pago: new Date().toISOString()
@@ -129,32 +125,30 @@ export const registrarPago = async (sesionId, monto, metodo) => {
 };
 
 /**
- * Update session state to request payment
+ * Update order state to request payment
  */
 export const solicitarPago = async (mesaId, metodo = 'Efectivo') => {
-    const sesionActiva = await getSesionActiva(mesaId);
-    if (sesionActiva) {
-        await fetchApi(`/sesion/${sesionActiva.id}`, {
+    const pedidoActivo = await getPedidoActivo(mesaId);
+    if (pedidoActivo) {
+        await fetchApi(`/pedido/${pedidoActivo.id}`, {
             method: 'PATCH',
-            body: JSON.stringify({ estado: 'Pendiente_cobro' })
+            body: JSON.stringify({ estado: 'pendiente_cobro' })
         });
-        // We could also store the preferred method if the schema allowed it, 
-        // but for now we follow the existing pattern.
     }
 };
 
 /**
- * Finalize session and regenerate mesa UUID
+ * Finalize pedido and regenerate mesa UUID
  */
-export const finalizarSesion = async (sesionId, mesaId) => {
+export const finalizarPedido = async (pedidoId, mesaId) => {
     const { generateUuid } = await import('../utils/uuid');
     
-    // Close session
-    await fetchApi(`/sesion/${sesionId}`, {
+    // Close pedido
+    await fetchApi(`/pedido/${pedidoId}`, {
         method: 'PATCH',
         body: JSON.stringify({ 
-            estado: 'Cerrada', 
-            fecha_fin: new Date().toISOString() 
+            estado: 'cerrado', 
+            fecha_final: new Date().toISOString() 
         })
     });
 
@@ -168,14 +162,12 @@ export const finalizarSesion = async (sesionId, mesaId) => {
 };
 
 /**
- * Update session state to call for assistance
+ * We no longer have an explicit "call waiter" state in the DB if we only use pedido state.
+ * But we could use 'activo' or similar if needed. We'll leave it as a no-op or specific state if added later.
+ * Wait, the old useMesasRealtime read 'Peticion_asistencia'. We don't have that in enum.
+ * So 'llamarCamarero' should probably be managed outside or skipped.
+ * For now we'll do nothing, since the enum doesn't support 'Peticion_asistencia'.
  */
 export const llamarCamarero = async (mesaId) => {
-    const sesionActiva = await getSesionActiva(mesaId);
-    if (sesionActiva) {
-        await fetchApi(`/sesion/${sesionActiva.id}`, {
-            method: 'PATCH',
-            body: JSON.stringify({ estado: 'Peticion_asistencia' })
-        });
-    }
+    console.warn("Llamar camarero no est\u00e1 implementado en el nuevo esquema todavía.");
 };

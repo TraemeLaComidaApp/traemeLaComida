@@ -1,28 +1,15 @@
 import { fetchApi } from './apiClient';
 import { generateUuid } from '../utils/uuid';
 
-export const añadirAComanda = async (mesaId, sesionId, pedidoId, producto) => {
-    let currentSesionId = sesionId;
+export const añadirAComanda = async (mesaId, pedidoId, producto) => {
     let currentPedidoId = pedidoId;
-
-    if (!currentSesionId) {
-        const newSesion = await fetchApi('/sesion', {
-            method: 'POST',
-            body: JSON.stringify({
-                id_mesa: mesaId,
-                estado: 'activa',
-                fecha_inicio: new Date().toISOString()
-            })
-        });
-        currentSesionId = newSesion.id;
-    }
 
     if (!currentPedidoId) {
         const newPedido = await fetchApi('/pedido', {
             method: 'POST',
             body: JSON.stringify({
-                id_sesion: currentSesionId,
-                estado: 'Recibido',
+                id_mesa: mesaId,
+                estado: 'recibido',
                 es_barra: false,
                 creado_at: new Date().toISOString()
             })
@@ -55,18 +42,17 @@ export const servirDetalles = async (detallesIds) => {
     }
 };
 
-export const solicitarCobro = async (sesionId) => {
-    await fetchApi(`/sesion/${sesionId}`, {
+export const solicitarCobro = async (pedidoId) => {
+    await fetchApi(`/pedido/${pedidoId}`, {
         method: 'PATCH',
-        body: JSON.stringify({ estado: 'Pendiente_cobro' })
+        body: JSON.stringify({ estado: 'pendiente_cobro' })
     });
 };
 
-export const cobrarYFinalizarMesa = async (sesionId, pedidoId, mesaId, totalCalculado, metodoPago) => {
+export const cobrarYFinalizarMesa = async (pedidoId, mesaId, totalCalculado, metodoPago) => {
     await fetchApi('/pago', {
         method: 'POST',
         body: JSON.stringify({
-            id_sesion: sesionId,
             id_pedido: pedidoId,
             monto_pagado: totalCalculado,
             metodo: metodoPago,
@@ -76,12 +62,7 @@ export const cobrarYFinalizarMesa = async (sesionId, pedidoId, mesaId, totalCalc
 
     await fetchApi(`/pedido/${pedidoId}`, {
         method: 'PATCH',
-        body: JSON.stringify({ estado: 'Entregado' })
-    });
-
-    await fetchApi(`/sesion/${sesionId}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ estado: 'cerrada', fecha_fin: new Date().toISOString() })
+        body: JSON.stringify({ estado: 'cerrado', fecha_final: new Date().toISOString() })
     });
 
     // Regenerate UUID so the table's QR link is invalidated after payment

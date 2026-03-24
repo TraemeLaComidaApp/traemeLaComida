@@ -6,7 +6,7 @@ export class CreatePedidoDto {
   @ApiProperty({ required: false, type: () => Number })
   @IsOptional()
   @IsNumber()
-  id_sesion?: number;
+  id_mesa?: number;
 
   @ApiProperty({ required: false, type: () => Boolean })
   @IsOptional()
@@ -23,4 +23,10 @@ export class CreatePedidoDto {
   @IsDate()
   @Type(() => Date)
   creado_at?: Date;
+
+  @ApiProperty({ required: false, type: () => Date })
+  @IsOptional()
+  @IsDate()
+  @Type(() => Date)
+  fecha_final?: Date;
 }

@@ -2,26 +2,22 @@ import { fetchApi } from './apiClient';
 
 export const getPedidosPendientesCocina = async () => {
     try {
-        const [pedidos, detalles, sesiones, mesas, productos] = await Promise.all([
+        const [pedidos, detalles, mesas, productos] = await Promise.all([
             fetchApi('/pedido'),
             fetchApi('/detalle-pedido'),
-            fetchApi('/sesion'),
             fetchApi('/mesa'),
             fetchApi('/producto')
         ]);
 
-        const pedidosActivos = (pedidos || []).filter(p => !['Completado', 'Cancelado'].includes(p.estado));
+        const pedidosActivos = (pedidos || []).filter(p => p.estado !== 'cerrado');
         
         const tickets = pedidosActivos.map(p => {
             let identificadorStr = '';
             if (p.es_barra) {
                 identificadorStr = `Barra`;
-            } else if (p.id_sesion) {
-                const sesionObj = (sesiones || []).find(s => s.id === p.id_sesion);
-                if (sesionObj && sesionObj.id_mesa) {
-                    const mesaObj = (mesas || []).find(m => m.id === sesionObj.id_mesa);
-                    identificadorStr = mesaObj ? `Mesa ${mesaObj.numero}` : `Mesa Desconocida`;
-                }
+            } else if (p.id_mesa) {
+                const mesaObj = (mesas || []).find(m => m.id === p.id_mesa);
+                identificadorStr = mesaObj ? `Mesa ${mesaObj.numero}` : `Mesa Desconocida`;
             }
 
             const detallesPedido = (detalles || []).filter(d => d.id_pedido === p.id);

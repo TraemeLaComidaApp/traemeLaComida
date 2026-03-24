@@ -8,10 +8,9 @@ export const useMesasRealtime = () => {
 
     const cargarMesas = async () => {
         try {
-            const [dbSalas, dbMesas, sesiones, pedidos, detalles, productos] = await Promise.all([
+            const [dbSalas, dbMesas, pedidos, detalles, productos] = await Promise.all([
                 fetchApi('/sala'),
                 fetchApi('/mesa'),
-                fetchApi('/sesion'),
                 fetchApi('/pedido'),
                 fetchApi('/detalle-pedido'),
                 fetchApi('/producto')
@@ -21,16 +20,14 @@ export const useMesasRealtime = () => {
             validSalas.sort((a, b) => a.id - b.id);
             setSalas(validSalas);
 
-            const dbSesiones = (sesiones || []).filter(s => s.estado !== 'Cerrada' && s.estado !== 'Completado');
-            const dbPedidos = (pedidos || []).filter(p => ['Recibido', 'En_preparacion', 'Listo_para_servir', 'Pedido_realizado'].includes(p.estado));
+            const dbPedidos = (pedidos || []).filter(p => p.estado !== 'cerrado');
             
             if (!dbMesas) return;
 
             let readyItemsCount = 0;
 
             const mesasFormated = dbMesas.map(m => {
-                const sesionActiva = dbSesiones.find(s => s.id_mesa === m.id);
-                const pedidoActivo = sesionActiva ? dbPedidos.find(p => p.id_sesion === sesionActiva.id) : null;
+                const pedidoActivo = dbPedidos.find(p => p.id_mesa === m.id);
                 
                 const pedidoItems = [];
                 if (pedidoActivo) {
@@ -63,11 +60,10 @@ export const useMesasRealtime = () => {
                     y: `${m.pos_y}%`,
                     w: `${m.ancho}px`,
                     h: `${m.alto}px`,
-                    necesitaCobro: sesionActiva?.estado === 'Pendiente_cobro',
-                    estadoSesion: sesionActiva?.estado,
+                    necesitaCobro: pedidoActivo?.estado === 'pendiente_cobro',
+                    estadoPedido: pedidoActivo?.estado,
                     metodoPago: null,
                     pedido: pedidoItems,
-                    sesionId: sesionActiva?.id,
                     pedidoId: pedidoActivo?.id
                 };
             });

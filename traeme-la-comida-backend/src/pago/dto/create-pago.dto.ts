@@ -3,10 +3,6 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
 export class CreatePagoDto {
-  @ApiProperty({ required: false, type: () => Number })
-  @IsOptional()
-  @IsNumber()
-  id_sesion?: number;
 
   @ApiProperty({ required: false, type: () => Number })
   @IsOptional()

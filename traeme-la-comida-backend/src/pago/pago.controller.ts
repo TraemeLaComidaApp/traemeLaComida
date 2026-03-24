@@ -21,11 +21,7 @@ export class PagoController {
     return this.service.findAll();
   }
 
-  @Get('sesion/:idSesion')
-  @ApiOperation({ summary: 'Obtener pagos por id de sesion' })
-  findBySesion(@Param('idSesion') idSesion: string) {
-    return this.service.findBySesion(+idSesion);
-  }
+
 
   @Get('pedido/:idPedido')
   @ApiOperation({ summary: 'Obtener pagos por id de pedido' })
@@ -33,19 +29,18 @@ export class PagoController {
     return this.service.findByPedido(+idPedido);
   }
 
-  @Patch(':idSesion/:idPedido')
+  @Patch(':idPedido')
   @ApiOperation({ summary: 'Actualizar un pago' })
   update(
-    @Param('idSesion') idSesion: string,
     @Param('idPedido') idPedido: string,
     @Body() updateDto: UpdatePagoDto,
   ) {
-    return this.service.update(+idSesion, +idPedido, updateDto);
+    return this.service.update(+idPedido, updateDto);
   }
 
-  @Delete(':idSesion/:idPedido')
+  @Delete(':idPedido')
   @ApiOperation({ summary: 'Eliminar un pago' })
-  remove(@Param('idSesion') idSesion: string, @Param('idPedido') idPedido: string) {
-    return this.service.remove(+idSesion, +idPedido);
+  remove(@Param('idPedido') idPedido: string) {
+    return this.service.remove(+idPedido);
   }
 }

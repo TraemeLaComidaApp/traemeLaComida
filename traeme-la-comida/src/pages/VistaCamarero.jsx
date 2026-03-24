@@ -60,7 +60,7 @@ export default function VistaCamarero() {
     // --- 3. FUNCIONES DE CÁLCULO VISUAL ---
     const calcularEstadoMesa = (mesa) => {
         if (mesa.necesitaCobro) return { bg: '#fecaca', border: '#ef4444', estado: 'cobrar' };
-        if (mesa.estadoSesion === 'Peticion_asistencia') return { bg: '#bae6fd', border: '#0ea5e9', estado: 'asistencia' };
+
         const tieneListos = mesa.pedido.some(p => p.estadoItem === 'listo');
         if (tieneListos) return { bg: '#fef08a', border: '#eab308', estado: 'servir' };
         const tieneNoServido = mesa.pedido.some(p => p.estadoItem === 'no_servido');
@@ -71,7 +71,7 @@ export default function VistaCamarero() {
     const getNotificacionSala = (idSalaBuscada) => {
         const mesasSala = mesas.filter(m => m.salaId === idSalaBuscada);
         const hayCobro = mesasSala.some(m => m.necesitaCobro);
-        const hayAsistencia = mesasSala.some(m => m.estadoSesion === 'Peticion_asistencia');
+        const hayAsistencia = false;
         const hayListo = mesasSala.some(m => m.pedido.some(p => p.estadoItem === 'listo'));
 
         if (hayCobro) return <span className="sala-dot dot-rojo"></span>;
@@ -83,7 +83,7 @@ export default function VistaCamarero() {
     // --- 4. FUNCIONES DE ACCIÓN ---
     const añadirProducto = async (mesa, producto) => {
         try {
-            await añadirAComanda(mesa.id, mesa.sesionId, mesa.pedidoId, producto);
+            await añadirAComanda(mesa.id, mesa.pedidoId, producto);
         } catch (error) {
             console.error(error);
             alert("Error al añadir a la comanda.");
@@ -119,7 +119,7 @@ export default function VistaCamarero() {
     const cobrarYCerrarMesaLocal = async (mesa) => {
         const total = mesa.pedido.reduce((t, i) => t + (i.precio * i.cantidad), 0);
         try {
-            await cobrarYFinalizarMesa(mesa.sesionId, mesa.pedidoId, mesa.id, total, 'Efectivo'); // Asumimos efectivo por defecto
+            await cobrarYFinalizarMesa(mesa.pedidoId, mesa.id, total, 'Efectivo'); // Asumimos efectivo por defecto
             setMesaSeleccionada(null);
         } catch (error) {
             console.error(error);

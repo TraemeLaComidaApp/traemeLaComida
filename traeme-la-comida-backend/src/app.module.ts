@@ -5,7 +5,7 @@ import { ConfigModule } from '@nestjs/config';
 import { ConfiguracionLocalModule } from './configuracion-local/configuracion-local.module';
 import { SalaModule } from './sala/sala.module';
 import { MesaModule } from './mesa/mesa.module';
-import { SesionModule } from './sesion/sesion.module';
+
 import { CategoriaProductoModule } from './categoria-producto/categoria-producto.module';
 import { ProductoModule } from './producto/producto.module';
 import { CategoriaOpcionModule } from './categoria-opcion/categoria-opcion.module';
@@ -21,7 +21,7 @@ import { SupabaseModule } from './supabase/supabase.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    ConfiguracionLocalModule, SalaModule, MesaModule, SesionModule, CategoriaProductoModule, ProductoModule, CategoriaOpcionModule, ProductoCategoriaOpcionModule, OpcionModule, PedidoModule, DetallePedidoModule, SeleccionOpcionModule, PagoModule, UsuarioModule, SupabaseModule
+    ConfiguracionLocalModule, SalaModule, MesaModule, CategoriaProductoModule, ProductoModule, CategoriaOpcionModule, ProductoCategoriaOpcionModule, OpcionModule, PedidoModule, DetallePedidoModule, SeleccionOpcionModule, PagoModule, UsuarioModule, SupabaseModule
   ],
   controllers: [AppController],
   providers: [AppService],

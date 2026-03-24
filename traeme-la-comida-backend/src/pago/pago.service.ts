@@ -29,15 +29,7 @@ export class PagoService {
     return data;
   }
 
-  async findBySesion(idSesion: number) {
-    const { data, error } = await this.supabaseService.getClient()
-      .from(this.tableName)
-      .select('*')
-      .eq('id_sesion', idSesion);
 
-    if (error) throw error;
-    return data;
-  }
 
   async findByPedido(idPedido: number) {
     const { data, error } = await this.supabaseService.getClient()
@@ -49,11 +41,10 @@ export class PagoService {
     return data;
   }
 
-  async update(idSesion: number, idPedido: number, updateDto: UpdatePagoDto) {
+  async update(idPedido: number, updateDto: UpdatePagoDto) {
     const { data, error } = await this.supabaseService.getClient()
       .from(this.tableName)
       .update(updateDto)
-      .eq('id_sesion', idSesion)
       .eq('id_pedido', idPedido)
       .select()
       .single();
@@ -63,11 +54,10 @@ export class PagoService {
     return data;
   }
 
-  async remove(idSesion: number, idPedido: number) {
+  async remove(idPedido: number) {
     const { data, error } = await this.supabaseService.getClient()
       .from(this.tableName)
       .delete()
-      .eq('id_sesion', idSesion)
       .eq('id_pedido', idPedido)
       .select()
       .single();
