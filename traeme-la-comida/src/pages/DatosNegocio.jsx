@@ -8,8 +8,8 @@ const DatosNegocio = ({ nombreActual, alGuardarNombre }) => {
     const [logo, setLogo] = useState(null);
 
     // --- ESTADOS: CREDENCIALES PROPIETARIO ---
-    const [usuarioPropietario, setUsuarioPropietario] = useState('admin');
-    const [emailPropietario, setEmailPropietario] = useState('admin@mibar.com');
+    const [usuarioPropietario, setUsuarioPropietario] = useState('propietario');
+    const [emailPropietario, setEmailPropietario] = useState('propietario@mibar.com');
     const [passPropietario, setPassPropietario] = useState('1234');
 
     // --- ESTADOS: CREDENCIALES PERSONAL ---
@@ -35,7 +35,7 @@ const DatosNegocio = ({ nombreActual, alGuardarNombre }) => {
 
                 const creds = await getCredenciales();
                 creds.forEach(cred => {
-                    if (cred.rol === 'admin') {
+                    if (cred.rol === 'propietario') {
                         setUsuarioPropietario(cred.usuario);
                         setPassPropietario(cred.password);
                         setEmailPropietario(cred.email || '');
@@ -65,7 +65,7 @@ const DatosNegocio = ({ nombreActual, alGuardarNombre }) => {
     const manejarGuardar = async () => {
         try {
             await updateConfiguracionLocal(configId, nombreLocal, logo);
-            await updateCredencial('admin', usuarioPropietario, passPropietario, emailPropietario);
+            await updateCredencial('propietario', usuarioPropietario, passPropietario, emailPropietario);
             await updateCredencial('camarero', usuarioCamarero, pinCamarero, null);
             await updateCredencial('cocina', usuarioCocina, pinCocina, null);
 
