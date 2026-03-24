@@ -6,6 +6,7 @@ import { UpdateMesaDto } from './dto/update-mesa.dto';
 @Injectable()
 export class MesaService {
   private readonly tableName = 'mesa';
+  private mesasConAsistencia = new Set<number>();
 
   constructor(private readonly supabaseService: SupabaseService) {}
 
@@ -77,5 +78,19 @@ export class MesaService {
     if (error) throw error;
     if (!data) throw new NotFoundException('Recurso no encontrado');
     return data;
+  }
+
+  solicitarAsistencia(id: number) {
+    this.mesasConAsistencia.add(id);
+    return { success: true };
+  }
+
+  limpiarAsistencia(id: number) {
+    this.mesasConAsistencia.delete(id);
+    return { success: true };
+  }
+
+  obtenerAsistencias() {
+    return Array.from(this.mesasConAsistencia);
   }
 }

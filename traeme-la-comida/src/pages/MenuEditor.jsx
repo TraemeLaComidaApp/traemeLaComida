@@ -112,8 +112,10 @@ export default function MenuEditor() {
     // LÓGICA DE PRODUCTOS (Opciones y sus relaciones Mín/Máx)
     // =========================================================
     const abrirEditorProducto = (catId, producto = null) => {
+        const categoriaActual = categorias.find(c => c.id === catId);
+        const numeroProductos = categoriaActual ? categoriaActual.productos.length : 0;
         setEditandoProd(producto ? { ...producto, catId, gruposOpciones: producto.gruposOpciones || [] } : {
-            id: null, catId, nombre: '', desc: '', precio: '', img: '', visible: true, orden: cat.productos.length, gruposOpciones: []
+            id: null, catId, nombre: '', desc: '', precio: '', img: '', visible: true, orden: numeroProductos, gruposOpciones: []
         });
     };
 

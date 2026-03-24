@@ -78,3 +78,9 @@ export const simularPlatoListo = async (detalleId) => {
         body: JSON.stringify({ estado: 'listo' })
     });
 };
+
+export const limpiarAsistencia = async (mesaId) => {
+    await fetchApi(`/mesa/${mesaId}/asistencia`, {
+        method: 'DELETE'
+    });
+};

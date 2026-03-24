@@ -169,5 +169,7 @@ export const finalizarPedido = async (pedidoId, mesaId) => {
  * For now we'll do nothing, since the enum doesn't support 'Peticion_asistencia'.
  */
 export const llamarCamarero = async (mesaId) => {
-    console.warn("Llamar camarero no est\u00e1 implementado en el nuevo esquema todavía.");
+    await fetchApi(`/mesa/${mesaId}/asistencia`, {
+        method: 'POST'
+    });
 };

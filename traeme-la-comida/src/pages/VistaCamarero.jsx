@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './VistaCamarero.css';
 import { useMesasRealtime } from '../hooks/useMesasRealtime';
-import { añadirAComanda, eliminarProductoDelPedido, servirDetalles, cobrarYFinalizarMesa, simularPlatoListo } from '../services/apiCamarero';
+import { añadirAComanda, eliminarProductoDelPedido, servirDetalles, cobrarYFinalizarMesa, simularPlatoListo, limpiarAsistencia } from '../services/apiCamarero';
 import { getProductosDisponibles } from '../services/apiMenu';
 import { loginWithCredenciales } from '../services/apiAuth';
 
@@ -60,6 +60,7 @@ export default function VistaCamarero() {
     // --- 3. FUNCIONES DE CÁLCULO VISUAL ---
     const calcularEstadoMesa = (mesa) => {
         if (mesa.necesitaCobro) return { bg: '#fecaca', border: '#ef4444', estado: 'cobrar' };
+        if (mesa.necesitaAsistencia) return { bg: '#fca5a5', border: '#ef4444', estado: 'asistencia' };
 
         const tieneListos = mesa.pedido.some(p => p.estadoItem === 'listo');
         if (tieneListos) return { bg: '#fef08a', border: '#eab308', estado: 'servir' };
@@ -71,11 +72,10 @@ export default function VistaCamarero() {
     const getNotificacionSala = (idSalaBuscada) => {
         const mesasSala = mesas.filter(m => m.salaId === idSalaBuscada);
         const hayCobro = mesasSala.some(m => m.necesitaCobro);
-        const hayAsistencia = false;
+        const hayAsistencia = mesasSala.some(m => m.necesitaAsistencia);
         const hayListo = mesasSala.some(m => m.pedido.some(p => p.estadoItem === 'listo'));
 
-        if (hayCobro) return <span className="sala-dot dot-rojo"></span>;
-        if (hayAsistencia) return <span className="sala-dot dot-rojo blink-dot"></span>; // Or blue if desired
+        if (hayCobro || hayAsistencia) return <span className="sala-dot dot-rojo blink-dot"></span>;
         if (hayListo) return <span className="sala-dot dot-amarillo"></span>;
         return null;
     };
@@ -326,6 +326,16 @@ export default function VistaCamarero() {
                         </div>
 
                         <div className="acciones-mesa">
+                            {mesaActiva.necesitaAsistencia && (
+                                <button className="btn-accion btn-servir" style={{backgroundColor: '#eab308'}} onClick={async () => {
+                                    await limpiarAsistencia(mesaActiva.id);
+                                    // Actualización optimista
+                                    setMesaSeleccionada({...mesaActiva, necesitaAsistencia: false});
+                                }}>
+                                    🛎️ Atendida
+                                </button>
+                            )}
+
                             {mesaActiva.pedido.some(p => p.estadoItem === 'listo') && mesaActiva.tipoPedido !== 'barra' && (
                                 <button className="btn-accion btn-servir" onClick={() => servirPlatosListosLocal(mesaActiva)}>
                                     🍽️ Servir todos los platos

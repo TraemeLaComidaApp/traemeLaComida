@@ -8,12 +8,13 @@ export const useMesasRealtime = () => {
 
     const cargarMesas = async () => {
         try {
-            const [dbSalas, dbMesas, pedidos, detalles, productos] = await Promise.all([
+            const [dbSalas, dbMesas, pedidos, detalles, productos, asistenciasActivas] = await Promise.all([
                 fetchApi('/sala'),
                 fetchApi('/mesa'),
                 fetchApi('/pedido'),
                 fetchApi('/detalle-pedido'),
-                fetchApi('/producto')
+                fetchApi('/producto'),
+                fetchApi('/mesa/asistencia/activas')
             ]);
 
             const validSalas = dbSalas || [];
@@ -61,6 +62,7 @@ export const useMesasRealtime = () => {
                     w: `${m.ancho}px`,
                     h: `${m.alto}px`,
                     necesitaCobro: pedidoActivo?.estado === 'pendiente_cobro',
+                    necesitaAsistencia: (asistenciasActivas || []).includes(m.id),
                     estadoPedido: pedidoActivo?.estado,
                     metodoPago: null,
                     pedido: pedidoItems,

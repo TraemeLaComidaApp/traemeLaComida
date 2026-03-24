@@ -44,4 +44,22 @@ export class MesaController {
   remove(@Param('id') id: string) {
     return this.service.remove(+id);
   }
+
+  @Post(':id/asistencia')
+  @ApiOperation({ summary: 'Solicitar asistencia' })
+  solicitarAsistencia(@Param('id') id: string) {
+    return this.service.solicitarAsistencia(+id);
+  }
+
+  @Delete(':id/asistencia')
+  @ApiOperation({ summary: 'Limpiar asistencia' })
+  limpiarAsistencia(@Param('id') id: string) {
+    return this.service.limpiarAsistencia(+id);
+  }
+
+  @Get('asistencia/activas')
+  @ApiOperation({ summary: 'Obtener mesas con asistencia' })
+  obtenerAsistencias() {
+    return this.service.obtenerAsistencias();
+  }
 }

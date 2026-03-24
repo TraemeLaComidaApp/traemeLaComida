@@ -62,6 +62,15 @@ const VistaCocina = () => {
 
         try {
             await actualizarEstadoDetalle(itemActual.idDetalle, nuevoEstado);
+            
+            const todosListos = pedido.items.every((item, idx) => 
+                idx === itemIndex ? nuevoEstado === 'listo' : item.estado === 'listo'
+            );
+            
+            if (todosListos) {
+                setCompletados(prev => [{ id: pedido.idPedido, mesa: pedido.mesaStr, resumen: `Resuelto a las ${new Date().toLocaleTimeString()}` }, ...prev]);
+            }
+            
             cargarPedidos(); // Refrescar 
         } catch (error) {
             console.error("Error toggling item", error);
