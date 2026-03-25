@@ -8,13 +8,14 @@ export const useMesasRealtime = () => {
 
     const cargarMesas = async () => {
         try {
-            const [dbSalas, dbMesas, pedidos, detalles, productos, asistenciasActivas] = await Promise.all([
+            const [dbSalas, dbMesas, pedidos, detalles, productos, asistenciasActivas, pagos] = await Promise.all([
                 fetchApi('/sala'),
                 fetchApi('/mesa'),
                 fetchApi('/pedido'),
                 fetchApi('/detalle-pedido'),
                 fetchApi('/producto'),
-                fetchApi('/mesa/asistencia/activas')
+                fetchApi('/mesa/asistencia/activas'),
+                fetchApi('/pago')
             ]);
 
             const validSalas = dbSalas || [];
@@ -22,6 +23,7 @@ export const useMesasRealtime = () => {
             setSalas(validSalas);
 
             const dbPedidos = (pedidos || []).filter(p => p.estado !== 'cerrado');
+            const dbPagos = pagos || [];
             
             if (!dbMesas) return;
 
@@ -52,6 +54,13 @@ export const useMesasRealtime = () => {
                     });
                 }
 
+                // BUSCAR MÉTODO DE PAGO EN LA TABLA PAGO
+                let metodoEncontrado = pedidoActivo?.metodo_pago;
+                if (pedidoActivo && !metodoEncontrado) {
+                    const pagoRelacionado = dbPagos.find(pg => pg.id_pedido === pedidoActivo.id);
+                    if (pagoRelacionado) metodoEncontrado = pagoRelacionado.metodo;
+                }
+
                 return {
                     id: m.id,
                     salaId: m.id_sala,
@@ -64,7 +73,7 @@ export const useMesasRealtime = () => {
                     necesitaCobro: pedidoActivo?.estado === 'pendiente_cobro',
                     necesitaAsistencia: (asistenciasActivas || []).includes(m.id),
                     estadoPedido: pedidoActivo?.estado,
-                    metodoPago: null,
+                    metodoPago: metodoEncontrado,
                     pedido: pedidoItems,
                     pedidoId: pedidoActivo?.id
                 };

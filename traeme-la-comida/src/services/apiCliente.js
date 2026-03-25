@@ -113,15 +113,30 @@ export const actualizarEstadoDetalle = async (detalleId, nuevoEstado) => {
  * Register a payment in the database
  */
 export const registrarPago = async (pedidoId, monto, metodo) => {
-    return await fetchApi('/pago', {
-        method: 'POST',
-        body: JSON.stringify({
-            id_pedido: pedidoId,
-            monto_pagado: monto,
-            metodo: metodo,
-            fecha_pago: new Date().toISOString()
-        })
-    });
+    try {
+        // Intentamos crear el registro (POST)
+        return await fetchApi('/pago', {
+            method: 'POST',
+            body: JSON.stringify({
+                id_pedido: pedidoId,
+                monto_pagado: monto,
+                metodo: metodo,
+                fecha_pago: new Date().toISOString()
+            })
+        });
+    } catch (error) {
+        // Si ya existe (PK id_pedido), actualizamos el registro existente (PATCH)
+        // Nota: Muchos sistemas REST/Supabase devuelven 409 o similar en conflicto.
+        console.warn("El registro de pago ya existe, intentando actualizar...", error);
+        return await fetchApi(`/pago/${pedidoId}`, {
+            method: 'PATCH',
+            body: JSON.stringify({
+                monto_pagado: monto,
+                metodo: metodo,
+                fecha_pago: new Date().toISOString()
+            })
+        });
+    }
 };
 
 /**
@@ -132,7 +147,10 @@ export const solicitarPago = async (mesaId, metodo = 'Efectivo') => {
     if (pedidoActivo) {
         await fetchApi(`/pedido/${pedidoActivo.id}`, {
             method: 'PATCH',
-            body: JSON.stringify({ estado: 'pendiente_cobro' })
+            body: JSON.stringify({
+                estado: 'pendiente_cobro',
+                metodo_pago: metodo // Assuming the backend supports this field or we are adding it for consistency
+            })
         });
     }
 };
@@ -142,13 +160,13 @@ export const solicitarPago = async (mesaId, metodo = 'Efectivo') => {
  */
 export const finalizarPedido = async (pedidoId, mesaId) => {
     const { generateUuid } = await import('../utils/uuid');
-    
+
     // Close pedido
     await fetchApi(`/pedido/${pedidoId}`, {
         method: 'PATCH',
-        body: JSON.stringify({ 
-            estado: 'cerrado', 
-            fecha_final: new Date().toISOString() 
+        body: JSON.stringify({
+            estado: 'cerrado',
+            fecha_final: new Date().toISOString()
         })
     });
 

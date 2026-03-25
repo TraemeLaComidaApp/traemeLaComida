@@ -7,8 +7,10 @@ import { generateUuid } from '../utils/uuid';
  * Builds the QR code image URL that encodes the full client access link.
  * Uses the current app origin so it works in both dev and production.
  */
-const getQrUrl = (uuid) =>
-    `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(`${window.location.origin}/mesa/${uuid}`)}`;
+const getQrUrl = (uuid, tipo) => {
+    const ruta = tipo === 'barra' ? 'barra' : 'mesa';
+    return `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(`${window.location.origin}/${ruta}/${uuid}`)}`;
+};
 
 const MapaEditor = () => {
     const [salas, setSalas] = useState([{ id: Date.now(), nombre: 'Salón Principal', elementos: [], anchoSala: 800, altoSala: 500 }]);
@@ -164,7 +166,8 @@ const MapaEditor = () => {
                                     alert("No puedes eliminar la última sala.");
                                 }
                             }}
-                            style={{ marginLeft: '-15px', marginRight: '10px', background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}
+                            title="Eliminar Sala"
+                            style={{ marginLeft: '10px', marginRight: '5px', background: '#fee2e2', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '16px', fontWeight: 'bold', width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background-color 0.2s' }}
                         >
                             ✕
                         </button>
@@ -257,7 +260,7 @@ const MapaEditor = () => {
                     <div className="inventory-list">
                         {salaActiva.elementos.map(el => (
                             <div key={el.id} className="inventory-item">
-                                <img src={getQrUrl(el.uuid)} onClick={() => setQrZoom(el)} alt="qr" />
+                                <img src={getQrUrl(el.uuid, el.tipo)} onClick={() => setQrZoom(el)} alt="qr" />
                                 <div className="inventory-details">
                                     <input
                                         type="text"
@@ -288,11 +291,11 @@ const MapaEditor = () => {
                     <div className="qr-modal-content" onClick={e => e.stopPropagation()}>
                         <h2>{qrZoom.tipo === 'barra' ? 'Barra' : 'Mesa'} #{qrZoom.numero}</h2>
                         <p style={{ fontSize: '11px', color: '#64748b', wordBreak: 'break-all', margin: '0 0 12px' }}>
-                            {window.location.origin}/mesa/{qrZoom.uuid}
+                            {window.location.origin}/{qrZoom.tipo === 'barra' ? 'barra' : 'mesa'}/{qrZoom.uuid}
                         </p>
-                        <img src={getQrUrl(qrZoom.uuid)} alt="qr" />
+                        <img src={getQrUrl(qrZoom.uuid, qrZoom.tipo)} alt="qr" />
                         <div className="qr-actions">
-                            <a href={getQrUrl(qrZoom.uuid)} download={`QR_${qrZoom.tipo}_${qrZoom.numero}.png`} className="btn-download">Descargar</a>
+                            <a href={getQrUrl(qrZoom.uuid, qrZoom.tipo)} download={`QR_${qrZoom.tipo}_${qrZoom.numero}.png`} className="btn-download">Descargar</a>
                             <button onClick={() => setQrZoom(null)} className="btn-close">Cerrar</button>
                         </div>
                     </div>

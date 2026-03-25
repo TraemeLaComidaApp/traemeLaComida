@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import './VistaBarra.css';
 import { getMenuCliente } from '../services/apiMenuManager';
-import { submitOrder } from '../services/apiCliente';
+import { submitOrder, getMesaByUuid, getPedidoActivo, getDetallesPedido, registrarPago } from '../services/apiCliente';
+import { fetchApi } from '../services/apiClient';
 import { getConfiguracionLocal } from '../services/apiAuth';
+import { useParams } from 'react-router-dom';
 
 const VistaBarra = () => {
     const [seccionActiva, setSeccionActiva] = useState('menu');
@@ -12,6 +14,9 @@ const VistaBarra = () => {
     const [pagoSolicitado, setPagoSolicitado] = useState(false);
     const [esperandoCobro, setEsperandoCobro] = useState(false);
     const [numeroPedido, setNumeroPedido] = useState(null);
+
+    const { uuid } = useParams();
+    const [idMesaBarra, setIdMesaBarra] = useState(null);
 
     const [productoModal, setProductoModal] = useState(null);
     const [opcionesElegidas, setOpcionesElegidas] = useState({});
@@ -26,12 +31,36 @@ const VistaBarra = () => {
     const [configNegocio, setConfigNegocio] = useState({ nombre_local: 'Cargando...', logo_url: null });
 
     useEffect(() => {
+        const resolveBarra = async () => {
+            try {
+                if (uuid) {
+                    const data = await getMesaByUuid(uuid);
+                    const mesaValida = Array.isArray(data) ? data[0] : (data.data || data);
+                    if (mesaValida && mesaValida.id) setIdMesaBarra(mesaValida.id);
+                } else {
+                    const mesas = await fetchApi('/mesa') || [];
+                    const primerBarra = mesas.find(m => m.tipo === 'barra');
+                    if (primerBarra) setIdMesaBarra(primerBarra.id);
+                    else if (mesas.length > 0) setIdMesaBarra(mesas[0].id);
+                }
+            } catch (error) {
+                console.error("Error resolviendo la barra:", error);
+            }
+        };
+        resolveBarra();
+
         const fetchMenu = async () => {
-            const dataMenu = await getMenuCliente();
-            setMenuData(dataMenu || []);
-            setCargandoMenu(false);
+            try {
+                const dataMenu = await getMenuCliente();
+                setMenuData(dataMenu || []);
+            } catch (err) {
+                console.error("Error fetching menu:", err);
+            } finally {
+                setCargandoMenu(false);
+            }
         };
         fetchMenu();
+        const menuInterval = setInterval(fetchMenu, 15000);
 
         const fetchConfig = async () => {
             const config = await getConfiguracionLocal();
@@ -40,7 +69,42 @@ const VistaBarra = () => {
             }
         };
         fetchConfig();
+
+        return () => clearInterval(menuInterval);
     }, []);
+
+    // HYDRATION PARA BARRA
+    useEffect(() => {
+        if (idMesaBarra) {
+            const hydrateBarra = async () => {
+                try {
+                    const pedido = await getPedidoActivo(idMesaBarra);
+                    if (pedido) {
+                        const detalles = await getDetallesPedido(pedido.id);
+                        if (detalles && detalles.length > 0) {
+                            const newCarrito = detalles.map(det => ({
+                                producto: { id: det.id_producto, nombre: det.producto?.nombre || 'Producto', precio: det.precio_unitario },
+                                nombre: det.producto?.nombre || 'Producto',
+                                precioFinal: det.precio_unitario,
+                                extrasAplicados: det.seleccionesOpciones?.map(sel => ({
+                                    opcionSeleccionada: { id: sel.id_opcion, nombre: sel.opcion?.nombre || '', suplemento: sel.precio_extra_aplicado }
+                                })) || [],
+                                nota: det.notas,
+                                enviado: true,
+                                estadoPago: det.estado === 'pagado' ? 'pagado' : null
+                            }));
+                            setCarrito(newCarrito);
+                            if (pedido.estado === 'pendiente_cobro') setEsperandoCobro(true);
+                            if (pedido.estado === 'cerrado') setPagoSolicitado(true);
+                        }
+                    }
+                } catch (err) {
+                    console.error("Error hydrating barra:", err);
+                }
+            };
+            hydrateBarra();
+        }
+    }, [idMesaBarra]);
 
     const categoriasTabs = ['Todo', ...menuData.map(c => c.nombre)];
 
@@ -126,12 +190,22 @@ const VistaBarra = () => {
         setCarrito(carrito.filter((_, index) => index !== indexAEliminar));
     };
 
-    const gestionarPago = async (tipo) => {
+    const gestionarPago = async (metodo) => {
         if (carrito.length === 0) return;
 
-        const mensaje = tipo === 'digital'
-            ? "¿Deseas confirmar el pago digital y mandar tu pedido a barra?"
-            : "¿Avisar al personal para realizar el pago en barra?";
+        // Mapeo a strings específicas del Enum de la Base de Datos
+        let metodoEnum = 'Efectivo';
+        if (metodo === 'bizum' || metodo === 'Bizum') metodoEnum = 'Bizum';
+        else if (metodo === 'gpay' || metodo === 'GooglePay') metodoEnum = 'GooglePay';
+        else if (metodo === 'card' || metodo === 'Tarjeta') metodoEnum = 'Tarjeta';
+        else if (metodo === 'barra') {
+            metodoEnum = metodoPagoMesa === 'card' ? 'Tarjeta' : 'Efectivo';
+        }
+
+        const esDigital = metodoEnum === 'Bizum' || metodoEnum === 'GooglePay';
+        const mensaje = esDigital
+            ? `¿Deseas confirmar el pago con ${metodoEnum} y mandar tu pedido a barra?`
+            : `¿Avisar al personal para realizar el pago en barra con ${metodoEnum}?`;
 
         if (window.confirm(mensaje)) {
             const itemsPorEnviar = carrito.filter(item => !item.enviado);
@@ -140,16 +214,27 @@ const VistaBarra = () => {
             const n_pedido_barra = Math.floor(Math.random() * 999) + 1;
 
             try {
-                if (tipo === 'digital') {
-                    await submitOrder(null, true, n_pedido_barra, itemsPorEnviar);
+                if (!idMesaBarra) {
+                    alert("No se ha podido identificar el ID de la barra en el sistema. Asegúrate de tener al menos una creada en el MapaEditor.");
+                    return;
+                }
 
-                    const carritoEnviado = carrito.map(item => ({ ...item, enviado: true }));
-                    setCarrito(carritoEnviado);
-                    setNumeroPedido(n_pedido_barra);
+                await submitOrder(idMesaBarra, true, n_pedido_barra, itemsPorEnviar);
+                
+                const pedido = await getPedidoActivo(idMesaBarra);
+                if (pedido) {
+                    const monto = itemsPorEnviar.reduce((acc, i) => acc + i.precioFinal, 0);
+                    await registrarPago(pedido.id, monto, metodoEnum);
+                }
+                
+                const carritoEnviado = carrito.map(item => ({ ...item, enviado: true }));
+                setCarrito(carritoEnviado);
+                setNumeroPedido(n_pedido_barra);
+
+                if (esDigital) {
                     setPagoSolicitado(true);
                 } else {
-                    await submitOrder(null, true, n_pedido_barra, itemsPorEnviar);
-                    setNumeroPedido(n_pedido_barra);
+                    await solicitarPagoApi(idMesaBarra, metodoEnum);
                     setEsperandoCobro(true);
                 }
             } catch (err) {
@@ -375,14 +460,14 @@ const VistaBarra = () => {
                                                 <span className="material-symbols-outlined icon-orange">payments</span>
                                                 <h3>Pagar ahora (Digital)</h3>
                                             </div>
-                                            <button className="vb-btn-digital" onClick={() => gestionarPago('digital')}>
+                                            <button className="vb-btn-digital" onClick={() => gestionarPago('bizum')}>
                                                 <div className="vb-digital-info">
                                                     <div className="icon-bizum">BIZUM</div>
                                                     <span>Bizum</span>
                                                 </div>
                                                 <span className="material-symbols-outlined text-muted">chevron_right</span>
                                             </button>
-                                            <button className="vb-btn-digital" onClick={() => gestionarPago('digital')}>
+                                            <button className="vb-btn-digital" onClick={() => gestionarPago('gpay')}>
                                                 <div className="vb-digital-info">
                                                     <span className="material-symbols-outlined icon-gpay">google</span>
                                                     <span>Google Pay</span>

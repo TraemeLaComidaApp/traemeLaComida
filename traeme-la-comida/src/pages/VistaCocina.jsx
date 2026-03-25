@@ -3,6 +3,7 @@ import './VistaCocina.css';
 import { loginWithCredenciales } from '../services/apiAuth';
 import { useCocinaRealtime } from '../hooks/useCocinaRealtime';
 import { actualizarEstadoDetalle, marcarProductoAgotado } from '../services/apiCocina';
+import { getMenuCliente } from '../services/apiMenuManager';
 
 const VistaCocina = () => {
     // --- ESTADOS DE AUTENTICACIÓN ---
@@ -21,9 +22,21 @@ const VistaCocina = () => {
     const [escuchando, setEscuchando] = useState(false);
     const [ultimoComando, setUltimoComando] = useState("");
 
+    const [menuData, setMenuData] = useState([]);
+    const [modalBloquearStock, setModalBloquearStock] = useState(false);
+    const [filtroStock, setFiltroStock] = useState("");
+
     useEffect(() => {
         const timer = setInterval(() => setHora(new Date().toLocaleTimeString()), 1000);
         return () => clearInterval(timer);
+    }, []);
+
+    useEffect(() => {
+        const fetchMenu = async () => {
+            const dataMenu = await getMenuCliente();
+            setMenuData(dataMenu || []);
+        };
+        fetchMenu();
     }, []);
 
     // --- LÓGICA DE LOGIN ---
@@ -113,11 +126,9 @@ const VistaCocina = () => {
         setTimeout(() => setUltimoComando(""), 4000);
     };
 
-    const marcarAgotadoManual = () => {
-        const producto = window.prompt("Escribe el nombre EXTRACTO o COMÚN de la carta que está agotado (Ej: Aguacate, Croissant, Mantequilla):");
-        if (producto && producto.trim() !== "") {
-            marcarComoAgotadoLocal(producto);
-        }
+    const abrirModalStock = () => {
+        setModalBloquearStock(true);
+        setFiltroStock("");
     };
 
     const restaurarStockLocal = (ingredienteLimpio) => {
@@ -274,7 +285,7 @@ const VistaCocina = () => {
                 </div>
                 <div className="vcoc-header-right">
                     {/* NUEVO BOTÓN MANUAL DE STOCK */}
-                    <button onClick={marcarAgotadoManual} className="vcoc-btn-manual" title="Marcar producto como agotado manualmente">
+                    <button onClick={abrirModalStock} className="vcoc-btn-manual" title="Marcar producto como agotado">
                         <span className="material-symbols-outlined">block</span>
                         BLOQUEAR STOCK
                     </button>
@@ -392,6 +403,61 @@ const VistaCocina = () => {
                     <div className="vcoc-clock">{hora}</div>
                 </div>
             </footer>
+
+            {/* MODAL DE BLOQUEAR STOCK */}
+            {modalBloquearStock && (
+                <div 
+                    onClick={() => setModalBloquearStock(false)}
+                    style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 9999, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+                >
+                    <div 
+                        onClick={e => e.stopPropagation()} 
+                        style={{ backgroundColor: '#1e293b', padding: '20px', borderRadius: '12px', width: '90%', maxWidth: '500px', color: 'white', display: 'flex', flexDirection: 'column', maxHeight: '80vh' }}
+                    >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                            <h2 style={{ margin: 0 }}>Bloquear Producto</h2>
+                            <button onClick={() => setModalBloquearStock(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '24px' }}>✕</button>
+                        </div>
+                        <input 
+                            type="text" 
+                            placeholder="Buscar producto..." 
+                            value={filtroStock}
+                            onChange={e => setFiltroStock(e.target.value)}
+                            style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #334155', backgroundColor: '#0f172a', color: 'white', marginBottom: '15px', fontSize: '16px', boxSizing: 'border-box' }}
+                            autoFocus
+                        />
+                        <div style={{ overflowY: 'auto', paddingRight: '10px' }}>
+                            {menuData.flatMap(cat => cat.productos).filter(p => p.nombre.toLowerCase().includes(filtroStock.toLowerCase())).map(prod => {
+                                const isBloqueado = productosAgotados.includes(prod.nombre.toUpperCase());
+                                return (
+                                    <div 
+                                        key={prod.id} 
+                                        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', borderBottom: '1px solid #334155', borderRadius: '8px', transition: 'background 0.2s', opacity: isBloqueado ? 0.6 : 1 }}
+                                    >
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                            <img src={prod.img} alt="" style={{ width: '40px', height: '40px', borderRadius: '6px', objectFit: 'cover' }} />
+                                            <span style={{ fontWeight: 'bold' }}>{prod.nombre}</span>
+                                        </div>
+                                        <button 
+                                            disabled={isBloqueado}
+                                            onClick={() => {
+                                                marcarComoAgotadoLocal(prod.nombre);
+                                                setModalBloquearStock(false);
+                                            }}
+                                            style={{ backgroundColor: isBloqueado ? '#475569' : '#ef4444', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '6px', cursor: isBloqueado ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}
+                                        >
+                                            {isBloqueado ? 'AGOTADO' : 'BLOQUEAR'}
+                                        </button>
+                                    </div>
+                                );
+                            })}
+                            {menuData.flatMap(cat => cat.productos).filter(p => p.nombre.toLowerCase().includes(filtroStock.toLowerCase())).length === 0 && (
+                                <p style={{ color: '#94a3b8', textAlign: 'center', padding: '20px' }}>No se encontraron productos.</p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

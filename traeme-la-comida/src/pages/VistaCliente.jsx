@@ -34,9 +34,11 @@ const VistaCliente = () => {
     const [notaOpcional, setNotaOpcional] = useState("");
 
     const [modalPago, setModalPago] = useState(null);
+    const [modalDivisionPago, setModalDivisionPago] = useState(null); // { metodo }
     const [tipoDivision, setTipoDivision] = useState('todo');
     const [itemsSeleccionadosPago, setItemsSeleccionadosPago] = useState([]);
     const [modoSeleccionPago, setModoSeleccionPago] = useState(false);
+    const [metodoDivisionActivo, setMetodoDivisionActivo] = useState(null);
 
     const [estadoVoz, setEstadoVoz] = useState(null);
     const [mensajeVoz, setMensajeVoz] = useState("");
@@ -57,11 +59,19 @@ const VistaCliente = () => {
 
     useEffect(() => {
         const fetchMenu = async () => {
-            const dataMenu = await getMenuCliente();
-            setMenuData(dataMenu || []);
-            setCargandoMenu(false);
+            try {
+                const dataMenu = await getMenuCliente();
+                setMenuData(dataMenu || []);
+            } catch (err) {
+                console.error("Error fetching menu:", err);
+            } finally {
+                setCargandoMenu(false);
+            }
         };
         fetchMenu();
+
+        // POLL MENU EVERY 15 SECONDS FOR STOCK SYNC
+        const menuInterval = setInterval(fetchMenu, 15000);
 
         const fetchConfig = async () => {
             const config = await getConfiguracionLocal();
@@ -70,7 +80,41 @@ const VistaCliente = () => {
             }
         };
         fetchConfig();
+
+        return () => clearInterval(menuInterval);
     }, []);
+
+    // HYDRATION: FETCH ACTIVE ORDER ONCE MESA IS RESOLVED
+    useEffect(() => {
+        if (mesa && mesa.id) {
+            const hydrateCarrito = async () => {
+                try {
+                    const pedido = await getPedidoActivo(mesa.id);
+                    if (pedido) {
+                        const detalles = await getDetallesPedido(pedido.id);
+                        if (detalles && detalles.length > 0) {
+                             const newCarrito = detalles.map(det => ({
+                                 id_detalle: det.id,
+                                 producto: { id: det.id_producto, nombre: det.producto?.nombre || 'Producto', precio: det.precio_unitario },
+                                 nombre: det.producto?.nombre || 'Producto',
+                                 precioFinal: det.precio_unitario,
+                                 extrasAplicados: det.seleccionesOpciones?.map(sel => ({
+                                     opcionSeleccionada: { id: sel.id_opcion, nombre: sel.opcion?.nombre || '', suplemento: sel.precio_extra_aplicado }
+                                 })) || [],
+                                 nota: det.notas,
+                                 enviado: true,
+                                 estadoPago: det.estado === 'pagado' ? 'pagado' : (pedido.estado === 'pendiente_cobro' ? 'solicitado_mesa' : null)
+                             }));
+                            setCarrito(newCarrito);
+                        }
+                    }
+                } catch (err) {
+                    console.error("Error hydrating carrito:", err);
+                }
+            };
+            hydrateCarrito();
+        }
+    }, [mesa]);
 
     const categoriasTabs = ['Todo', ...menuData.map(c => c.nombre)];
 
@@ -186,48 +230,43 @@ const VistaCliente = () => {
         }
     };
 
-    const iniciarPago = async (metodo) => {
-        const indicesPagables = carrito
-            .map((item, index) => ({ item, index }))
-            .filter(({ item }) => item.enviado && !item.estadoPago)
-            .map(({ index }) => index);
+    const iniciarPago = (metodo, itemsIndices = []) => {
+        // Mapeo a strings específicas del Enum de la Base de Datos
+        let metodoEnum = 'Efectivo';
+        if (metodo === 'bizum' || metodo === 'Bizum') metodoEnum = 'Bizum';
+        else if (metodo === 'gpay' || metodo === 'GooglePay') metodoEnum = 'GooglePay';
+        else if (metodo === 'card' || metodo === 'Tarjeta') metodoEnum = 'Tarjeta';
+        else if (metodo === 'mesa') {
+            metodoEnum = metodoPagoMesa === 'card' ? 'Tarjeta' : 'Efectivo';
+        }
+
+        const indicesPagables = (itemsIndices && itemsIndices.length > 0)
+            ? itemsIndices
+            : (modoSeleccionPago ? itemsSeleccionadosPago : carrito
+                .map((item, index) => ({ item, index }))
+                .filter(({ item }) => item.enviado && !item.estadoPago)
+                .map(({ index }) => index));
 
         if (indicesPagables.length === 0) {
-            alert("No hay artículos pendientes de pago.");
+            alert("No hay artículos seleccionados o artículos pendientes de pago.");
             return;
         }
 
-        if (modoSeleccionPago) {
-            if (itemsSeleccionadosPago.length === 0) {
-                alert("Por favor, selecciona al menos un artículo para pagar.");
-                return;
-            }
-            if (metodo === 'mesa') {
-                if (window.confirm("¿Confirmas que deseas pagar los artículos seleccionados en mesa?")) {
-                    await ejecutarPagoMesa(itemsSeleccionadosPago);
-                }
-            } else {
-                if (window.confirm(`¿Proceder al pago digital de los artículos seleccionados con ${metodo === 'bizum' ? 'Bizum' : 'Google Pay'}?`)) {
-                    await ejecutarPagoDigital(itemsSeleccionadosPago, metodo);
-                }
-            }
+        if (!modoSeleccionPago && !itemsIndices.length) {
+            setMetodoDivisionActivo(metodoEnum);
+            setModalDivisionPago({ metodo: metodoEnum });
+            return;
+        }
+
+        const esDigital = metodoEnum.toLowerCase() === 'bizum' || metodoEnum.toLowerCase().includes('google') || metodoEnum.toLowerCase().includes('gpay');
+        if (!esDigital) {
+            ejecutarPagoMesa(indicesPagables, metodoEnum);
         } else {
-            // Ofrecer pagar todo o seleccionar
-            if (window.confirm("¿Deseas pagar todos los artículos pendientes?")) {
-                if (metodo === 'mesa') {
-                    await ejecutarPagoMesa(indicesPagables);
-                } else {
-                    await ejecutarPagoDigital(indicesPagables, metodo);
-                }
-            } else {
-                setModoSeleccionPago(true);
-                setItemsSeleccionadosPago([]);
-                alert("Selecciona los productos que deseas pagar de la lista.");
-            }
+            ejecutarPagoDigital(indicesPagables, metodoEnum);
         }
     };
 
-    const ejecutarPagoMesa = async (indices) => {
+    const ejecutarPagoMesa = async (indices, metodo = 'Efectivo') => {
         const monto = indices.reduce((acc, i) => acc + carrito[i].precioFinal, 0);
         const nuevoCarrito = carrito.map((item, index) => {
             if (indices.includes(index)) {
@@ -239,9 +278,20 @@ const VistaCliente = () => {
         
         if (mesa) {
             try {
-                // Notificamos al el backend
-                await solicitarPagoApi(mesa.id, metodoPagoMesa === 'card' ? 'Tarjeta' : 'Efectivo');
-                // Aquí podríamos registrar un pago con estado 'solicitado' si el schema lo permite
+                const pedido = await getPedidoActivo(mesa.id);
+                if (pedido) {
+                    // REGISTRAMOS EL PAGO TAMBIÉN PARA PAGOS EN MESA (INDICANDO EL MÉTODO)
+                    await registrarPago(pedido.id, monto, metodo);
+                    await solicitarPagoApi(mesa.id, metodo);
+
+                    // Opcional: Marcar los detalles como 'solicitado_mesa' en DB si queremos persistirlo por item
+                    for (const i of indices) {
+                        const item = carrito[i];
+                        if (item.id_detalle) {
+                            await actualizarEstadoDetalle(item.id_detalle, 'solicitado_mesa');
+                        }
+                    }
+                }
             } catch (err) {
                 console.error("Error solicitando pago:", err);
             }
@@ -258,32 +308,36 @@ const VistaCliente = () => {
             }
             return item;
         });
+        setCarrito(nuevoCarrito);
         
         if (mesa) {
             try {
                 const pedido = await getPedidoActivo(mesa.id);
                 if (pedido) {
                     await registrarPago(pedido.id, monto, metodo);
-                    // Opcional: Marcar los detalles como pagados en el backend
+                    
+                    // MARCAMOS LOS DETALLES COMO PAGADOS EN EL BACKEND
+                    for (const i of indices) {
+                        const item = carrito[i];
+                        if (item.id_detalle) {
+                            await actualizarEstadoDetalle(item.id_detalle, 'pagado');
+                        }
+                    }
+
+                    // Si se ha pagado todo el pedido, lo cerramos
+                    const nuevoCarritoTemp = carrito.map((it, idx) => indices.includes(idx) ? { ...it, estadoPago: 'pagado' } : it);
+                    if (nuevoCarritoTemp.every(it => it.estadoPago === 'pagado')) {
+                        await finalizarPedido(pedido.id, mesa.id);
+                    }
                 }
             } catch (err) {
-                console.error("Error registrando pago digital:", err);
+                console.error("Error al registrar pago digital:", err);
             }
         }
-
-        setCarrito(nuevoCarrito);
         setItemsSeleccionadosPago([]);
         setModoSeleccionPago(false);
-        setModalPago(null); 
-
-        // Verificar si todo está pagado para cerrar sesión
-        if (nuevoCarrito.every(item => item.estadoPago === 'pagado')) {
-            const pedido = await getPedidoActivo(mesa.id);
-            if (pedido) {
-                await finalizarPedido(pedido.id, mesa.id);
-            }
-        }
     };
+
 
     const confirmarPagoFinal = async () => {
         // Esta función queda por compatibilidad si se abren otros modales futuros
@@ -565,17 +619,38 @@ const VistaCliente = () => {
                                     )}
 
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '20px' }}>
-                                        {carrito.some(item => !item.enviado) && (
-                                            <button onClick={enviarACocina} className="vc-btn-carrito btn-dark">
-                                                ENVIAR PEDIDO A COCINA
-                                            </button>
-                                        )}
+                                        {modoSeleccionPago ? (
+                                            <>
+                                                <button 
+                                                    onClick={() => {
+                                                        const m = metodoDivisionActivo || (metodoPagoMesa === 'card' ? 'Tarjeta' : 'Efectivo');
+                                                        iniciarPago(m, itemsSeleccionadosPago);
+                                                    }} 
+                                                    className="vc-btn-carrito btn-dark"
+                                                    disabled={itemsSeleccionadosPago.length === 0}
+                                                    style={{ backgroundColor: '#1e293b' }}
+                                                >
+                                                    PAGAR SELECCIÓN ({itemsSeleccionadosPago.reduce((acc, idx) => acc + carrito[idx].precioFinal, 0).toFixed(2)}€)
+                                                </button>
+                                                <button onClick={() => { setModoSeleccionPago(false); setItemsSeleccionadosPago([]); }} className="vc-btn-text">
+                                                    Cancelar selección
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <>
+                                                {carrito.some(item => !item.enviado) && (
+                                                    <button onClick={enviarACocina} className="vc-btn-carrito btn-dark">
+                                                        ENVIAR PEDIDO A COCINA
+                                                    </button>
+                                                )}
 
-                                        {!todosPagados && (
-                                            <button onClick={() => setSeccionActiva('menu')} className="vc-btn-carrito btn-orange">
-                                                <span className="material-symbols-outlined" style={{ marginRight: '5px' }}>add_circle</span>
-                                                AÑADIR MÁS COSAS
-                                            </button>
+                                                {!todosPagados && (
+                                                    <button onClick={() => setSeccionActiva('menu')} className="vc-btn-carrito btn-orange">
+                                                        <span className="material-symbols-outlined" style={{ marginRight: '5px' }}>add_circle</span>
+                                                        AÑADIR MÁS COSAS
+                                                    </button>
+                                                )}
+                                            </>
                                         )}
                                     </div>
                                 </div>
@@ -811,6 +886,78 @@ const VistaCliente = () => {
                         )}
                     </div>
                 </div>
+            )}
+
+            {/* MODAL PROFESIONAL DE DIVISIÓN DE PAGO */}
+            {modalDivisionPago && (
+                <>
+                    <div className="vc-modal-backdrop" onClick={() => setModalDivisionPago(null)}></div>
+                    <div className="vc-product-sheet" style={{ height: 'auto', paddingBottom: '30px' }}>
+                        <div style={{ padding: '25px 20px', textAlign: 'center' }}>
+                            <div style={{ 
+                                width: '60px', height: '60px', backgroundColor: '#fff7ed', borderRadius: '50%', 
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px',
+                                color: '#ec9213'
+                            }}>
+                                <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>payments</span>
+                            </div>
+                            <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b', marginBottom: '10px' }}>¿Cómo quieres pagar?</h3>
+                            <p style={{ color: '#64748b', fontSize: '15px', lineHeight: '1.5', marginBottom: '25px' }}>
+                                Puedes pagar el total de la cuenta pendiente o seleccionar productos específicos para dividir el pago.
+                            </p>
+                            
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                <button 
+                                    onClick={async () => {
+                                        const indices = carrito
+                                            .map((item, index) => ({ item, index }))
+                                            .filter(({ item }) => item.enviado && !item.estadoPago)
+                                            .map(({ index }) => index);
+                                            
+                                        const m = modalDivisionPago.metodo;
+                                        setModalDivisionPago(null);
+                                        
+                                        const esDigital = m.toLowerCase() === 'bizum' || m.toLowerCase().includes('google') || m.toLowerCase().includes('gpay');
+                                        if (!esDigital) await ejecutarPagoMesa(indices, m);
+                                        else await ejecutarPagoDigital(indices, m);
+                                    }}
+                                    style={{ 
+                                        padding: '16px', borderRadius: '12px', border: 'none', 
+                                        backgroundColor: '#ec9213', color: 'white', fontWeight: 'bold', 
+                                        fontSize: '16px', cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(236,146,19, 0.2)' 
+                                    }}
+                                >
+                                    Pagar todo ({totalPendientePago.toFixed(2)}€)
+                                </button>
+                                
+                                <button 
+                                    onClick={() => {
+                                        setModoSeleccionPago(true);
+                                        setItemsSeleccionadosPago([]);
+                                        setModalDivisionPago(null);
+                                    }}
+                                    style={{ 
+                                        padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', 
+                                        backgroundColor: 'white', color: '#1e293b', fontWeight: 'bold', 
+                                        fontSize: '16px', cursor: 'pointer' 
+                                    }}
+                                >
+                                    Seleccionar productos
+                                </button>
+                                
+                                <button 
+                                    onClick={() => setModalDivisionPago(null)}
+                                    style={{ 
+                                        marginTop: '10px', background: 'none', border: 'none', 
+                                        color: '#94a3b8', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer' 
+                                    }}
+                                >
+                                    Cancelar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </>
             )}
         </div>
     );

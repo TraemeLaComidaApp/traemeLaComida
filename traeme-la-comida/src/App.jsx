@@ -21,6 +21,7 @@ function App() {
         {/* RUTAS DEL STAFF: No necesitan GPS (ellos están trabajando allí) */}
         <Route path="/staff/cocina" element={<VistaCocina />} />
         <Route path="/barra" element={<VistaBarra />} />
+        <Route path="/barra/:uuid" element={<VistaBarra />} />
         <Route path="/admin/gestion" element={<VistaPropietario />} />
         <Route path="/staff/mapa" element={<VistaCamarero />} />
 

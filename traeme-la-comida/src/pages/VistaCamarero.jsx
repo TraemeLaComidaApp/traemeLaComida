@@ -118,8 +118,9 @@ export default function VistaCamarero() {
 
     const cobrarYCerrarMesaLocal = async (mesa) => {
         const total = mesa.pedido.reduce((t, i) => t + (i.precio * i.cantidad), 0);
+        const metodoFinal = mesa.metodoPago || 'Efectivo';
         try {
-            await cobrarYFinalizarMesa(mesa.pedidoId, mesa.id, total, 'Efectivo'); // Asumimos efectivo por defecto
+            await cobrarYFinalizarMesa(mesa.pedidoId, mesa.id, total, metodoFinal); 
             setMesaSeleccionada(null);
         } catch (error) {
             console.error(error);
@@ -235,7 +236,9 @@ export default function VistaCamarero() {
                                 >
                                     {styleInfo.estado === 'cobrar' && (
                                         <div className="badge-notificacion badge-rojo">
-                                            {mesa.metodoPago === 'card' ? '💳' : '💶'}
+                                            {mesa.metodoPago?.toLowerCase().includes('tarjeta') || mesa.metodoPago === 'card' ? '💳' : 
+                                             mesa.metodoPago?.toLowerCase() === 'bizum' ? '📱' : 
+                                             (mesa.metodoPago?.toLowerCase().includes('google') || mesa.metodoPago?.toLowerCase().includes('gpay')) ? '🤖' : '💶'}
                                         </div>
                                     )}
                                     {styleInfo.estado === 'asistencia' && (
@@ -262,7 +265,11 @@ export default function VistaCamarero() {
                         <h2>{mesaActiva.numero === 'Barra' ? 'Servicio de Barra' : `Mesa ${mesaActiva.numero}`}</h2>
                         {mesaActiva.necesitaCobro && (
                             <div className="alerta-cobro">
-                                Pagar con {mesaActiva.metodoPago === 'card' ? '💳 TARJETA' : '💶 EFECTIVO'}
+                                Pagar con {
+                                    (mesaActiva.metodoPago?.toLowerCase().includes('tarjeta') || mesaActiva.metodoPago === 'card') ? '💳 TARJETA' : 
+                                    mesaActiva.metodoPago?.toLowerCase() === 'bizum' ? '📱 BIZUM' : 
+                                    (mesaActiva.metodoPago?.toLowerCase().includes('google') || mesaActiva.metodoPago?.toLowerCase().includes('gpay')) ? '🤖 GOOGLE PAY' : '💶 EFECTIVO'
+                                }
                             </div>
                         )}
                     </div>
