@@ -117,31 +117,66 @@ export default function VistaCamarero() {
     };
 
     const cobrarYCerrarMesaLocal = async (mesa) => {
-        // Solo cobramos los items que no están marcados como 'pagado'
-        const itemsPendientes = mesa.pedido.filter(i => i.estadoItem !== 'pagado');
-        const totalPendiente = itemsPendientes.reduce((t, i) => t + (i.precio * i.cantidad), 0);
+        // 1. Identificar qué productos vamos a cobrar ahora
+        // Si hay items con solicitud explícita, cobramos solo esos. Si no, cobramos todo lo pendiente.
+        const itemsSolicitados = mesa.pedido.filter(i => i.estadoItem === 'solicitado_mesa');
+        const itemsACobrar = itemsSolicitados.length > 0 ? itemsSolicitados : mesa.pedido.filter(i => i.estadoItem !== 'pagado');
+
+        if (itemsACobrar.length === 0) {
+            alert("No hay productos pendientes de cobro.");
+            return;
+        }
+
+        const totalACobrar = itemsACobrar.reduce((t, i) => t + (i.precio * i.cantidad), 0);
         const metodoFinal = mesa.metodoPago || 'Efectivo';
 
         try {
-            // Solo registramos un nuevo pago en el backend si hay algo pendiente
-            if (totalPendiente > 0) {
-                await cobrarYFinalizarMesa(mesa.pedidoId, mesa.id, totalPendiente, metodoFinal);
-            } else {
-                // Si ya está todo pagado, solo cerramos el pedido y limpiamos la mesa
+            // 2. Registrar el pago parcial o total en la tabla de pagos
+            // Importamos dinámicamente para no ensuciar la cabecera si no es necesario
+            const { registrarPago, actualizarEstadoDetalle } = await import('../services/apiCliente');
+            await registrarPago(mesa.pedidoId, totalACobrar, metodoFinal);
+
+            // 3. Marcar los items correspondientes como pagados en la base de datos
+            for (const item of itemsACobrar) {
+                await actualizarEstadoDetalle(item.idDetalle, 'pagado');
+            }
+
+            // 4. Determinar si el pedido debe cerrarse o volver a estado activo
+            // Buscamos si en mesa.pedido original (antes de la actualización local de estados que aún no ha ocurrido)
+            // quedarán items sin pagar después de esta transacción.
+            const pendientesTotales = mesa.pedido.filter(i => i.estadoItem !== 'pagado');
+            const quedanPendientesReales = pendientesTotales.some(p => !itemsACobrar.find(a => a.idDetalle === p.idDetalle));
+
+            if (!quedanPendientesReales) {
+                // TODO PAGADO: Cerrar pedido y limpiar mesa
+                const { fetchApi } = await import('../services/apiClient');
                 await fetchApi(`/pedido/${mesa.pedidoId}`, {
                     method: 'PATCH',
-                    body: JSON.stringify({ estado: 'cerrado', fecha_final: new Date().toISOString() })
+                    body: JSON.stringify({
+                        estado: 'cerrado',
+                        fecha_final: new Date().toISOString()
+                    })
                 });
                 const { generateUuid } = await import('../utils/uuid');
                 await fetchApi(`/mesa/${mesa.id}`, {
                     method: 'PATCH',
                     body: JSON.stringify({ uuid: generateUuid() })
                 });
+            } else {
+                // QUEDAN COSAS: Volver a estado activo (quita la alarma de cobro en el mapa)
+                const { fetchApi } = await import('../services/apiClient');
+                await fetchApi(`/pedido/${mesa.pedidoId}`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({
+                        estado: 'activo'
+                    })
+                });
             }
+
             setMesaSeleccionada(null);
         } catch (error) {
-            console.error(error);
-            alert("Error al finalizar la mesa.");
+            console.error("Error en cobro granular:", error);
+            alert("Hubo un error al procesar el cobro.");
         }
     };
 
@@ -368,7 +403,7 @@ export default function VistaCamarero() {
 
                             {mesaActiva.necesitaCobro && (
                                 <button className="btn-accion btn-cobrar" onClick={() => cobrarYCerrarMesaLocal(mesaActiva)}>
-                                    ✅ Cobrar y Cerrar Mesa
+                                    ✅ Cobrar
                                 </button>
                             )}
                         </div>

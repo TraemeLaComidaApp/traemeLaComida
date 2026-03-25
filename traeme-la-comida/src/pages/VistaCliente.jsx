@@ -119,9 +119,8 @@ const VistaCliente = () => {
                          })) || [],
                          nota: det.notas,
                          enviado: true,
-                         estadoPago: det.estado === 'pagado' ? 'pagado' : (pedido.estado === 'pendiente_cobro' ? 'solicitado_mesa' : (det.estado === 'solicitado_mesa' ? 'solicitado_mesa' : null))
+                         estadoPago: det.estado === 'pagado' ? 'pagado' : (det.estado === 'solicitado_mesa' ? 'solicitado_mesa' : null)
                      }));
-
                      // Solo actualizamos si hay cambios reales para evitar re-renders infinitos o pérdida de estado local efímero
                      setCarrito(newCarrito);
                 }
