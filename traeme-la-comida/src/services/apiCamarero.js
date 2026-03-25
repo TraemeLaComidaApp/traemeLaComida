@@ -50,27 +50,15 @@ export const solicitarCobro = async (pedidoId) => {
 };
 
 export const cobrarYFinalizarMesa = async (pedidoId, mesaId, totalCalculado, metodoPago) => {
-    try {
-        await fetchApi('/pago', {
-            method: 'POST',
-            body: JSON.stringify({
-                id_pedido: pedidoId,
-                monto_pagado: totalCalculado,
-                metodo: metodoPago,
-                fecha_pago: new Date().toISOString()
-            })
-        });
-    } catch (error) {
-        console.warn("El pago ya estaba registrado, actualizando...", error);
-        await fetchApi(`/pago/${pedidoId}`, {
-            method: 'PATCH',
-            body: JSON.stringify({
-                monto_pagado: totalCalculado,
-                metodo: metodoPago,
-                fecha_pago: new Date().toISOString()
-            })
-        });
-    }
+    await fetchApi('/pago', {
+        method: 'POST',
+        body: JSON.stringify({
+            id_pedido: pedidoId,
+            monto_pagado: totalCalculado,
+            metodo: metodoPago,
+            fecha_pago: new Date().toISOString()
+        })
+    });
 
     await fetchApi(`/pedido/${pedidoId}`, {
         method: 'PATCH',

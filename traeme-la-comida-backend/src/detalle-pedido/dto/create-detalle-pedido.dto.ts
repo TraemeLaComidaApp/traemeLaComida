@@ -32,4 +32,9 @@ export class CreateDetallePedidoDto {
   @IsOptional()
   @IsString()
   notas?: string;
+
+  @ApiProperty({ required: false, type: () => String })
+  @IsOptional()
+  @IsString()
+  metodo_pago_solicitado?: string;
 }

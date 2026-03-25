@@ -84,36 +84,55 @@ const VistaCliente = () => {
         return () => clearInterval(menuInterval);
     }, []);
 
-    // HYDRATION: FETCH ACTIVE ORDER ONCE MESA IS RESOLVED
+    // HYDRATION & POLLING: FETCH ACTIVE ORDER AND MONITOR STATUS
     useEffect(() => {
-        if (mesa && mesa.id) {
-            const hydrateCarrito = async () => {
-                try {
-                    const pedido = await getPedidoActivo(mesa.id);
-                    if (pedido) {
-                        const detalles = await getDetallesPedido(pedido.id);
-                        if (detalles && detalles.length > 0) {
-                             const newCarrito = detalles.map(det => ({
-                                 id_detalle: det.id,
-                                 producto: { id: det.id_producto, nombre: det.producto?.nombre || 'Producto', precio: det.precio_unitario },
-                                 nombre: det.producto?.nombre || 'Producto',
-                                 precioFinal: det.precio_unitario,
-                                 extrasAplicados: det.seleccionesOpciones?.map(sel => ({
-                                     opcionSeleccionada: { id: sel.id_opcion, nombre: sel.opcion?.nombre || '', suplemento: sel.precio_extra_aplicado }
-                                 })) || [],
-                                 nota: det.notas,
-                                 enviado: true,
-                                 estadoPago: det.estado === 'pagado' ? 'pagado' : (pedido.estado === 'pendiente_cobro' ? 'solicitado_mesa' : null)
-                             }));
-                            setCarrito(newCarrito);
+        if (!mesa || !mesa.id) return;
+
+        const hydrateAndPollStatus = async () => {
+            try {
+                const pedido = await getPedidoActivo(mesa.id);
+                
+                // Si ya no hay pedido activo, pero teníamos items enviados pendientes de pago,
+                // significa que el camarero ha cerrado la mesa y la cuenta ha sido saldada.
+                if (!pedido) {
+                    setCarrito(prev => {
+                        const hayPendientesDeCierre = prev.some(item => item.enviado && item.estadoPago !== 'pagado');
+                        if (hayPendientesDeCierre) {
+                            // IMPORTANTE: Solo marcamos como pagados los que ya estaban enviados
+                            return prev.map(item => item.enviado ? { ...item, estadoPago: 'pagado' } : item);
                         }
-                    }
-                } catch (err) {
-                    console.error("Error hydrating carrito:", err);
+                        return prev;
+                    });
+                    return;
                 }
-            };
-            hydrateCarrito();
-        }
+
+                // Si hay pedido, hidratamos o actualizamos estados
+                const detalles = await getDetallesPedido(pedido.id);
+                if (detalles && detalles.length > 0) {
+                     const newCarrito = detalles.map(det => ({
+                         id_detalle: det.id,
+                         producto: { id: det.id_producto, nombre: det.producto?.nombre || 'Producto', precio: det.precio_unitario },
+                         nombre: det.producto?.nombre || 'Producto',
+                         precioFinal: det.precio_unitario,
+                         extrasAplicados: det.seleccionesOpciones?.map(sel => ({
+                             opcionSeleccionada: { id: sel.id_opcion, nombre: sel.opcion?.nombre || '', suplemento: sel.precio_extra_aplicado }
+                         })) || [],
+                         nota: det.notas,
+                         enviado: true,
+                         estadoPago: det.estado === 'pagado' ? 'pagado' : (pedido.estado === 'pendiente_cobro' ? 'solicitado_mesa' : (det.estado === 'solicitado_mesa' ? 'solicitado_mesa' : null))
+                     }));
+
+                     // Solo actualizamos si hay cambios reales para evitar re-renders infinitos o pérdida de estado local efímero
+                     setCarrito(newCarrito);
+                }
+            } catch (err) {
+                console.error("Error polling order status:", err);
+            }
+        };
+
+        hydrateAndPollStatus();
+        const statusInterval = setInterval(hydrateAndPollStatus, 5000);
+        return () => clearInterval(statusInterval);
     }, [mesa]);
 
     const categoriasTabs = ['Todo', ...menuData.map(c => c.nombre)];
@@ -280,15 +299,14 @@ const VistaCliente = () => {
             try {
                 const pedido = await getPedidoActivo(mesa.id);
                 if (pedido) {
-                    // REGISTRAMOS EL PAGO TAMBIÉN PARA PAGOS EN MESA (INDICANDO EL MÉTODO)
-                    await registrarPago(pedido.id, monto, metodo);
+                    // ELIMINADO: registrarPago. Ahora solo el camarero registra los pagos físicos para evitar duplicados.
                     await solicitarPagoApi(mesa.id, metodo);
 
-                    // Opcional: Marcar los detalles como 'solicitado_mesa' en DB si queremos persistirlo por item
+                    // Marcar los detalles como 'solicitado_mesa' en DB con el método específico
                     for (const i of indices) {
                         const item = carrito[i];
                         if (item.id_detalle) {
-                            await actualizarEstadoDetalle(item.id_detalle, 'solicitado_mesa');
+                            await actualizarEstadoDetalle(item.id_detalle, 'solicitado_mesa', metodo);
                         }
                     }
                 }
@@ -320,7 +338,7 @@ const VistaCliente = () => {
                     for (const i of indices) {
                         const item = carrito[i];
                         if (item.id_detalle) {
-                            await actualizarEstadoDetalle(item.id_detalle, 'pagado');
+                            await actualizarEstadoDetalle(item.id_detalle, 'pagado', metodo);
                         }
                     }
 
@@ -662,12 +680,6 @@ const VistaCliente = () => {
                                         <p style={{ color: '#64748b', margin: '0', fontSize: '14px' }}>
                                             Prepara <strong>{totalEsperandoMesa.toFixed(2)}€</strong> para abonar en la mesa.
                                         </p>
-                                        <button
-                                            onClick={simularCobroCamarero}
-                                            style={{ marginTop: '20px', background: 'none', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '8px 15px', color: '#3b82f6', fontSize: '12px', cursor: 'pointer', fontWeight: 'bold' }}
-                                        >
-                                            (Botón Test: Simular cobro del camarero)
-                                        </button>
                                     </div>
                                 )}
 

@@ -1,7 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import './VistaBarra.css';
 import { getMenuCliente } from '../services/apiMenuManager';
-import { submitOrder, getMesaByUuid, getPedidoActivo, getDetallesPedido, registrarPago } from '../services/apiCliente';
+import { 
+    submitOrder, 
+    getMesaByUuid, 
+    getPedidoActivo, 
+    getDetallesPedido, 
+    registrarPago,
+    actualizarEstadoDetalle 
+} from '../services/apiCliente';
 import { fetchApi } from '../services/apiClient';
 import { getConfiguracionLocal } from '../services/apiAuth';
 import { useParams } from 'react-router-dom';
@@ -73,37 +80,55 @@ const VistaBarra = () => {
         return () => clearInterval(menuInterval);
     }, []);
 
-    // HYDRATION PARA BARRA
+    // HYDRATION & POLLING FOR BARRA
     useEffect(() => {
-        if (idMesaBarra) {
-            const hydrateBarra = async () => {
-                try {
-                    const pedido = await getPedidoActivo(idMesaBarra);
-                    if (pedido) {
-                        const detalles = await getDetallesPedido(pedido.id);
-                        if (detalles && detalles.length > 0) {
-                            const newCarrito = detalles.map(det => ({
-                                producto: { id: det.id_producto, nombre: det.producto?.nombre || 'Producto', precio: det.precio_unitario },
-                                nombre: det.producto?.nombre || 'Producto',
-                                precioFinal: det.precio_unitario,
-                                extrasAplicados: det.seleccionesOpciones?.map(sel => ({
-                                    opcionSeleccionada: { id: sel.id_opcion, nombre: sel.opcion?.nombre || '', suplemento: sel.precio_extra_aplicado }
-                                })) || [],
-                                nota: det.notas,
-                                enviado: true,
-                                estadoPago: det.estado === 'pagado' ? 'pagado' : null
-                            }));
-                            setCarrito(newCarrito);
-                            if (pedido.estado === 'pendiente_cobro') setEsperandoCobro(true);
-                            if (pedido.estado === 'cerrado') setPagoSolicitado(true);
+        if (!idMesaBarra) return;
+
+        const hydrateAndPollBarra = async () => {
+            try {
+                const pedido = await getPedidoActivo(idMesaBarra);
+                
+                // Si el pedido ha sido cerrado por el personal, marcamos los items que estaban enviados como pagados
+                if (!pedido) {
+                    setCarrito(prev => {
+                        const hayPendientesDeCierre = prev.some(item => item.enviado && item.estadoPago !== 'pagado');
+                        if (hayPendientesDeCierre) {
+                            // IMPORTANTE: Solo marcamos como pagados los que ya estaban enviados
+                            return prev.map(item => item.enviado ? { ...item, estadoPago: 'pagado' } : item);
                         }
-                    }
-                } catch (err) {
-                    console.error("Error hydrating barra:", err);
+                        return prev;
+                    });
+                    setPagoSolicitado(true);
+                    setEsperandoCobro(false);
+                    return;
                 }
-            };
-            hydrateBarra();
-        }
+
+                // Si hay pedido, hidratamos
+                const detalles = await getDetallesPedido(pedido.id);
+                if (detalles && detalles.length > 0) {
+                    const newCarrito = detalles.map(det => ({
+                        producto: { id: det.id_producto, nombre: det.producto?.nombre || 'Producto', precio: det.precio_unitario },
+                        nombre: det.producto?.nombre || 'Producto',
+                        precioFinal: det.precio_unitario,
+                        extrasAplicados: det.seleccionesOpciones?.map(sel => ({
+                            opcionSeleccionada: { id: sel.id_opcion, nombre: sel.opcion?.nombre || '', suplemento: sel.precio_extra_aplicado }
+                        })) || [],
+                        nota: det.notas,
+                        enviado: true,
+                        estadoPago: det.estado === 'pagado' ? 'pagado' : null
+                    }));
+                    setCarrito(newCarrito);
+                    if (pedido.estado === 'pendiente_cobro') setEsperandoCobro(true);
+                    if (pedido.estado === 'cerrado') setPagoSolicitado(true);
+                }
+            } catch (err) {
+                console.error("Error polling barra status:", err);
+            }
+        };
+
+        hydrateAndPollBarra();
+        const pollInterval = setInterval(hydrateAndPollBarra, 5000);
+        return () => clearInterval(pollInterval);
     }, [idMesaBarra]);
 
     const categoriasTabs = ['Todo', ...menuData.map(c => c.nombre)];
@@ -223,8 +248,19 @@ const VistaBarra = () => {
                 
                 const pedido = await getPedidoActivo(idMesaBarra);
                 if (pedido) {
-                    const monto = itemsPorEnviar.reduce((acc, i) => acc + i.precioFinal, 0);
-                    await registrarPago(pedido.id, monto, metodoEnum);
+                    const detalles = await getDetallesPedido(pedido.id);
+                    // Marcamos los detalles recién creados (que no estaban pagados) con el método
+                    for (const det of detalles) {
+                        if (det.estado !== 'pagado') {
+                            const nuevoEstado = esDigital ? 'pagado' : 'solicitado_mesa';
+                            await actualizarEstadoDetalle(det.id, nuevoEstado, metodoEnum);
+                        }
+                    }
+
+                    if (esDigital) {
+                        const monto = itemsPorEnviar.reduce((acc, i) => acc + i.precioFinal, 0);
+                        await registrarPago(pedido.id, monto, metodoEnum);
+                    }
                 }
                 
                 const carritoEnviado = carrito.map(item => ({ ...item, enviado: true }));
@@ -245,11 +281,7 @@ const VistaBarra = () => {
     };
 
     const simularConfirmacionCamarero = () => {
-        const carritoEnviado = carrito.map(item => ({ ...item, enviado: true }));
-        setCarrito(carritoEnviado);
-        setNumeroPedido(Math.floor(Math.random() * 99) + 1);
-        setEsperandoCobro(false);
-        setPagoSolicitado(true);
+        // Obsoleto: El sistema sincroniza automáticamente vía polling.
     };
 
     const iniciarEscuchaVoz = () => {
@@ -449,9 +481,6 @@ const VistaBarra = () => {
                                         <span className="material-symbols-outlined icon-large">hourglass_empty</span>
                                         <h3>Enseguida te cobramos</h3>
                                         <p>Por favor, acércate a la caja para abonar <strong>{totalPrecioCarrito.toFixed(2)}€</strong> en {metodoPagoMesa === 'cash' ? 'efectivo' : 'tarjeta'}.</p>
-                                        <button onClick={simularConfirmacionCamarero} className="vb-btn-simular">
-                                            [DEV] Simular que el camarero confirma el cobro
-                                        </button>
                                     </div>
                                 ) : !pagoSolicitado ? (
                                     <div className="vb-pago-grid">

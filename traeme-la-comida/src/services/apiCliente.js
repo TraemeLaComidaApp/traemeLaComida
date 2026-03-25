@@ -102,10 +102,13 @@ export const getDetallesPedido = async (pedidoId) => {
 /**
  * Mark a specific item as paid (or update its status)
  */
-export const actualizarEstadoDetalle = async (detalleId, nuevoEstado) => {
+export const actualizarEstadoDetalle = async (detalleId, nuevoEstado, metodoPago = null) => {
+    const body = { estado: nuevoEstado };
+    if (metodoPago) body.metodo_pago_solicitado = metodoPago;
+    
     return await fetchApi(`/detalle-pedido/${detalleId}`, {
         method: 'PATCH',
-        body: JSON.stringify({ estado: nuevoEstado })
+        body: JSON.stringify(body)
     });
 };
 
@@ -113,30 +116,15 @@ export const actualizarEstadoDetalle = async (detalleId, nuevoEstado) => {
  * Register a payment in the database
  */
 export const registrarPago = async (pedidoId, monto, metodo) => {
-    try {
-        // Intentamos crear el registro (POST)
-        return await fetchApi('/pago', {
-            method: 'POST',
-            body: JSON.stringify({
-                id_pedido: pedidoId,
-                monto_pagado: monto,
-                metodo: metodo,
-                fecha_pago: new Date().toISOString()
-            })
-        });
-    } catch (error) {
-        // Si ya existe (PK id_pedido), actualizamos el registro existente (PATCH)
-        // Nota: Muchos sistemas REST/Supabase devuelven 409 o similar en conflicto.
-        console.warn("El registro de pago ya existe, intentando actualizar...", error);
-        return await fetchApi(`/pago/${pedidoId}`, {
-            method: 'PATCH',
-            body: JSON.stringify({
-                monto_pagado: monto,
-                metodo: metodo,
-                fecha_pago: new Date().toISOString()
-            })
-        });
-    }
+    return await fetchApi('/pago', {
+        method: 'POST',
+        body: JSON.stringify({
+            id_pedido: pedidoId,
+            monto_pagado: monto,
+            metodo: metodo,
+            fecha_pago: new Date().toISOString()
+        })
+    });
 };
 
 /**

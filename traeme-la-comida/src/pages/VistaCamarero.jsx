@@ -117,14 +117,31 @@ export default function VistaCamarero() {
     };
 
     const cobrarYCerrarMesaLocal = async (mesa) => {
-        const total = mesa.pedido.reduce((t, i) => t + (i.precio * i.cantidad), 0);
+        // Solo cobramos los items que no están marcados como 'pagado'
+        const itemsPendientes = mesa.pedido.filter(i => i.estadoItem !== 'pagado');
+        const totalPendiente = itemsPendientes.reduce((t, i) => t + (i.precio * i.cantidad), 0);
         const metodoFinal = mesa.metodoPago || 'Efectivo';
+
         try {
-            await cobrarYFinalizarMesa(mesa.pedidoId, mesa.id, total, metodoFinal); 
+            // Solo registramos un nuevo pago en el backend si hay algo pendiente
+            if (totalPendiente > 0) {
+                await cobrarYFinalizarMesa(mesa.pedidoId, mesa.id, totalPendiente, metodoFinal);
+            } else {
+                // Si ya está todo pagado, solo cerramos el pedido y limpiamos la mesa
+                await fetchApi(`/pedido/${mesa.pedidoId}`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ estado: 'cerrado', fecha_final: new Date().toISOString() })
+                });
+                const { generateUuid } = await import('../utils/uuid');
+                await fetchApi(`/mesa/${mesa.id}`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ uuid: generateUuid() })
+                });
+            }
             setMesaSeleccionada(null);
         } catch (error) {
             console.error(error);
-            alert("Error al cobrar la mesa.");
+            alert("Error al finalizar la mesa.");
         }
     };
 
@@ -236,9 +253,9 @@ export default function VistaCamarero() {
                                 >
                                     {styleInfo.estado === 'cobrar' && (
                                         <div className="badge-notificacion badge-rojo">
-                                            {mesa.metodoPago?.toLowerCase().includes('tarjeta') || mesa.metodoPago === 'card' ? '💳' : 
-                                             mesa.metodoPago?.toLowerCase() === 'bizum' ? '📱' : 
-                                             (mesa.metodoPago?.toLowerCase().includes('google') || mesa.metodoPago?.toLowerCase().includes('gpay')) ? '🤖' : '💶'}
+                                            {mesa.metodoPago?.toLowerCase()?.includes('tarjeta') || mesa.metodoPago === 'card' ? '💳' :
+                                                mesa.metodoPago?.toLowerCase() === 'bizum' ? '📱' :
+                                                    (mesa.metodoPago?.toLowerCase()?.includes('google') || mesa.metodoPago?.toLowerCase()?.includes('gpay')) ? '🤖' : '💶'}
                                         </div>
                                     )}
                                     {styleInfo.estado === 'asistencia' && (
@@ -266,9 +283,9 @@ export default function VistaCamarero() {
                         {mesaActiva.necesitaCobro && (
                             <div className="alerta-cobro">
                                 Pagar con {
-                                    (mesaActiva.metodoPago?.toLowerCase().includes('tarjeta') || mesaActiva.metodoPago === 'card') ? '💳 TARJETA' : 
-                                    mesaActiva.metodoPago?.toLowerCase() === 'bizum' ? '📱 BIZUM' : 
-                                    (mesaActiva.metodoPago?.toLowerCase().includes('google') || mesaActiva.metodoPago?.toLowerCase().includes('gpay')) ? '🤖 GOOGLE PAY' : '💶 EFECTIVO'
+                                    (mesaActiva.metodoPago?.toLowerCase()?.includes('tarjeta') || mesaActiva.metodoPago === 'card') ? '💳 TARJETA' :
+                                        mesaActiva.metodoPago?.toLowerCase() === 'bizum' ? '📱 BIZUM' :
+                                            (mesaActiva.metodoPago?.toLowerCase()?.includes('google') || mesaActiva.metodoPago?.toLowerCase()?.includes('gpay')) ? '🤖 GOOGLE PAY' : '💶 EFECTIVO'
                                 }
                             </div>
                         )}
@@ -334,10 +351,10 @@ export default function VistaCamarero() {
 
                         <div className="acciones-mesa">
                             {mesaActiva.necesitaAsistencia && (
-                                <button className="btn-accion btn-servir" style={{backgroundColor: '#eab308'}} onClick={async () => {
+                                <button className="btn-accion btn-servir" style={{ backgroundColor: '#eab308' }} onClick={async () => {
                                     await limpiarAsistencia(mesaActiva.id);
                                     // Actualización optimista
-                                    setMesaSeleccionada({...mesaActiva, necesitaAsistencia: false});
+                                    setMesaSeleccionada({ ...mesaActiva, necesitaAsistencia: false });
                                 }}>
                                     🛎️ Atendida
                                 </button>
