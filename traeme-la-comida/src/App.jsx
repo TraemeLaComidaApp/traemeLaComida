@@ -1,12 +1,33 @@
-
+import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import VistaCliente from './pages/VistaCliente';
 import VistaCocina from './pages/VistaCocina';
 import VistaBarra from './pages/VistaBarra';
 import VistaCamarero from './pages/VistaCamarero';
 import VistaPropietario from './pages/VistaPropietario';
+import { getConfiguracionLocal } from './services/apiAuth';
 
 function App() {
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const config = await getConfiguracionLocal();
+        if (config && config.logo_url) {
+          let link = document.querySelector("link[rel~='icon']");
+          if (!link) {
+            link = document.createElement('link');
+            link.rel = 'icon';
+            document.head.appendChild(link);
+          }
+          link.href = config.logo_url;
+        }
+      } catch (error) {
+        console.error("Error fetching config for favicon:", error);
+      }
+    };
+    fetchConfig();
+  }, []);
+
   return (
     <Router>
       <Routes>
