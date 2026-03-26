@@ -22,7 +22,16 @@ export const useMesasRealtime = () => {
             validSalas.sort((a, b) => a.id - b.id);
             setSalas(validSalas);
 
-            const dbPedidos = (Array.isArray(pedidos) ? pedidos : []).filter(p => p.estado !== 'cerrado');
+            const dbPedidos = (Array.isArray(pedidos) ? pedidos : []).filter(p => {
+                if (p.es_barra) {
+                    if (p.estado === 'cerrado') {
+                        const dts = Array.isArray(detalles) ? detalles.filter(d => d.id_pedido === p.id) : [];
+                        return dts.length > 0 && dts.some(d => d.estado !== 'servido');
+                    }
+                    return true;
+                }
+                return p.estado !== 'cerrado';
+            });
             const dbPagos = Array.isArray(pagos) ? pagos : [];
             
             if (!dbMesas) return;
@@ -30,12 +39,18 @@ export const useMesasRealtime = () => {
             let readyItemsCount = 0;
 
             const mesasFormated = (Array.isArray(dbMesas) ? dbMesas : []).map(m => {
-                const pedidoActivo = dbPedidos.find(p => p.id_mesa === m.id);
+                const isBarra = m.tipo === 'barra';
+                const pedidosParaMesa = isBarra 
+                     ? dbPedidos.filter(p => p.id_mesa === m.id)
+                     : dbPedidos.filter(p => p.id_mesa === m.id).slice(0, 1);
+                
+                const pedidoActivo = pedidosParaMesa[0];
                 let metodoEncontrado = null;
                 
                 const pedidoItems = [];
-                if (pedidoActivo) {
-                    const detOfPedido = (Array.isArray(detalles) ? detalles : []).filter(d => d.id_pedido === pedidoActivo.id);
+                
+                pedidosParaMesa.forEach(pedidoItemActivo => {
+                    const detOfPedido = (Array.isArray(detalles) ? detalles : []).filter(d => d.id_pedido === pedidoItemActivo.id);
                     detOfPedido.forEach(det => {
                         const prod = (Array.isArray(productos) ? productos : []).find(pr => pr.id === det.id_producto);
                         
@@ -50,29 +65,30 @@ export const useMesasRealtime = () => {
                             precio: det.precio_unitario,
                             cantidad: det.cantidad,
                             estadoItem: det.estado,
-                            notas: det.notas
+                            notas: det.notas,
+                            idPedido: pedidoItemActivo.id
                         });
                     });
 
-                    // --- DETECTAR MÉTODO DE PAGO (Dentro del scope de detOfPedido) ---
-                    // 1. Buscamos si algún item del pedido tiene un método solicitado explícitamente (el más reciente)
-                    const itemsConMetodo = detOfPedido
-                        .filter(d => d.estado !== 'pagado' && d.metodo_pago_solicitado)
-                        .sort((a, b) => b.id - a.id); // Asumimos IDs mayores = más recientes
-
-                    if (itemsConMetodo.length > 0) {
-                        metodoEncontrado = itemsConMetodo[0].metodo_pago_solicitado;
-                    }
-
-                    // 2. Si no hay método solicitado en items, buscamos en los registros de la tabla pago
+                    // --- DETECTAR MÉTODO DE PAGO ---
                     if (!metodoEncontrado) {
-                        const pagosDePedido = dbPagos.filter(pg => pg.id_pedido === pedidoActivo.id);
-                        if (pagosDePedido.length > 0) {
-                            const ultimoPago = [...pagosDePedido].sort((a, b) => b.id - a.id)[0];
-                            metodoEncontrado = ultimoPago.metodo;
+                        const itemsConMetodo = detOfPedido
+                            .filter(d => d.estado !== 'pagado' && d.metodo_pago_solicitado)
+                            .sort((a, b) => b.id - a.id);
+
+                        if (itemsConMetodo.length > 0) {
+                            metodoEncontrado = itemsConMetodo[0].metodo_pago_solicitado;
+                        }
+
+                        if (!metodoEncontrado) {
+                            const pagosDePedido = dbPagos.filter(pg => pg.id_pedido === pedidoItemActivo.id);
+                            if (pagosDePedido.length > 0) {
+                                const ultimoPago = [...pagosDePedido].sort((a, b) => b.id - a.id)[0];
+                                metodoEncontrado = ultimoPago.metodo;
+                            }
                         }
                     }
-                }
+                });
 
                 return {
                     id: m.id,

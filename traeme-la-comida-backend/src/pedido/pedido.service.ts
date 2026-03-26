@@ -14,7 +14,7 @@ export class PedidoService {
       .from(this.tableName)
       .insert(createDto)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
     return data;
@@ -34,7 +34,7 @@ export class PedidoService {
       .from(this.tableName)
       .select('*')
       .eq('id', id)
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
     if (!data) throw new NotFoundException('Recurso no encontrado');
@@ -47,10 +47,10 @@ export class PedidoService {
       .update(updateDto)
       .eq('id', id)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
-    if (!data) throw new NotFoundException('Recurso no encontrado');
+    if (!data) throw new NotFoundException('Pedido no encontrado');
     return data;
   }
 
@@ -60,7 +60,7 @@ export class PedidoService {
       .delete()
       .eq('id', id)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
     if (!data) throw new NotFoundException('Recurso no encontrado');

@@ -39,6 +39,11 @@ const VistaCocina = () => {
         fetchMenu();
     }, []);
 
+    // Limpiar la barra lateral de "Listos" cuando el camarero los sirve y desaparecen de pedidos activos
+    useEffect(() => {
+        setCompletados(prev => prev.filter(c => pedidos.some(p => p.idPedido === c.id)));
+    }, [pedidos]);
+
     // --- LÓGICA DE LOGIN ---
     const manejarLogin = async (e) => {
         e.preventDefault();
@@ -68,10 +73,9 @@ const VistaCocina = () => {
         const itemActual = pedido.items[itemIndex];
         if (itemActual.estado === 'agotado') return;
 
-        // Flow: no_servido -> listo
-        let nuevoEstado = 'no_servido';
-        if (itemActual.estado === 'no_servido') nuevoEstado = 'listo';
-        else if (itemActual.estado === 'listo') nuevoEstado = 'no_servido'; // Toggle back if needed
+        // Flow: no_servido/pagado/solicitado_mesa -> listo
+        let nuevoEstado = 'listo';
+        if (itemActual.estado === 'listo') nuevoEstado = 'no_servido'; // Toggle back if needed
 
         try {
             await actualizarEstadoDetalle(itemActual.idDetalle, nuevoEstado);

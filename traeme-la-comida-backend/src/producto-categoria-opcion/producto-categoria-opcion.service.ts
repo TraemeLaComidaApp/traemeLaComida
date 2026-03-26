@@ -14,7 +14,7 @@ export class ProductoCategoriaOpcionService {
       .from(this.tableName)
       .insert(createDto)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
     return data;
@@ -56,7 +56,7 @@ export class ProductoCategoriaOpcionService {
       .eq('id_producto', idProducto)
       .eq('id_categoria_opcion', idCategoriaOpcion)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
     if (!data) throw new NotFoundException('Recurso no encontrado');
@@ -70,7 +70,7 @@ export class ProductoCategoriaOpcionService {
       .eq('id_producto', idProducto)
       .eq('id_categoria_opcion', idCategoriaOpcion)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
     if (!data) throw new NotFoundException('Recurso no encontrado');

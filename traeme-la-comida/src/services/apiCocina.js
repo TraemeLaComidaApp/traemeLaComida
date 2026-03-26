@@ -9,9 +9,18 @@ export const getPedidosPendientesCocina = async () => {
             fetchApi('/producto')
         ]);
 
-        const pedidosActivos = (pedidos || []).filter(p => p.estado !== 'cerrado');
+        const pedidosFiltrados = (pedidos || []).filter(p => {
+            if (p.es_barra) {
+                if (p.estado === 'cerrado') {
+                    const dts = (detalles || []).filter(d => d.id_pedido === p.id);
+                    return dts.length > 0 && dts.some(d => d.estado !== 'servido');
+                }
+                return true;
+            }
+            return p.estado !== 'cerrado';
+        });
         
-        const tickets = pedidosActivos.map(p => {
+        const tickets = pedidosFiltrados.map(p => {
             let identificadorStr = '';
             if (p.es_barra) {
                 identificadorStr = `Barra`;
@@ -21,8 +30,14 @@ export const getPedidosPendientesCocina = async () => {
             }
 
             const detallesPedido = (detalles || []).filter(d => d.id_pedido === p.id);
-            // Mostramos platos que NO estén servidos. El filtrado de 'listo' se hará en el componente para el historial.
-            const detallesValidos = detallesPedido.filter(d => d.estado !== 'servido');
+            
+            const detallesValidos = detallesPedido.filter(d => {
+                if (p.es_barra) {
+                    return d.estado === 'pagado' || d.estado === 'preparando' || d.estado === 'listo';
+                } else {
+                    return d.estado === 'no_servido' || d.estado === 'preparando' || d.estado === 'listo';
+                }
+            });
             
             if (detallesValidos.length === 0) return null;
 

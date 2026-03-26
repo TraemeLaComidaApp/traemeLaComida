@@ -7,7 +7,7 @@ import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 @ApiTags('Pedido')
 @Controller('pedido')
 export class PedidoController {
-  constructor(private readonly service: PedidoService) {}
+  constructor(private readonly service: PedidoService) { }
 
   @Post()
   @ApiOperation({ summary: 'Crear un registro en Pedido' })

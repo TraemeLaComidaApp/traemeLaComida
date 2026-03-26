@@ -14,7 +14,7 @@ export class PagoService {
       .from(this.tableName)
       .insert(createDto)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
     return data;
@@ -47,7 +47,7 @@ export class PagoService {
       .update(updateDto)
       .eq('id_pedido', idPedido)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
     if (!data) throw new NotFoundException('Recurso no encontrado');
@@ -60,7 +60,7 @@ export class PagoService {
       .delete()
       .eq('id_pedido', idPedido)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
     if (!data) throw new NotFoundException('Recurso no encontrado');

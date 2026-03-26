@@ -7,7 +7,8 @@ import {
     getPedidoActivo, 
     getDetallesPedido, 
     registrarPago,
-    actualizarEstadoDetalle 
+    actualizarEstadoDetalle,
+    solicitarPago as solicitarPagoApi
 } from '../services/apiCliente';
 import { fetchApi } from '../services/apiClient';
 import { getConfiguracionLocal } from '../services/apiAuth';
@@ -88,18 +89,23 @@ const VistaBarra = () => {
             try {
                 const pedido = await getPedidoActivo(idMesaBarra);
                 
-                // Si el pedido ha sido cerrado por el personal, marcamos los items que estaban enviados como pagados
+                // Si el pedido no existe, verificamos si tenemos cosas enviadas pendientes
                 if (!pedido) {
                     setCarrito(prev => {
+                        const hayEnviados = prev.some(item => item.enviado);
+                        if (hayEnviados) {
+                            setPagoSolicitado(true);
+                        } else {
+                            setPagoSolicitado(false);
+                        }
+                        setEsperandoCobro(false);
+
                         const hayPendientesDeCierre = prev.some(item => item.enviado && item.estadoPago !== 'pagado');
                         if (hayPendientesDeCierre) {
-                            // IMPORTANTE: Solo marcamos como pagados los que ya estaban enviados
                             return prev.map(item => item.enviado ? { ...item, estadoPago: 'pagado' } : item);
                         }
                         return prev;
                     });
-                    setPagoSolicitado(true);
-                    setEsperandoCobro(false);
                     return;
                 }
 
@@ -536,6 +542,14 @@ const VistaBarra = () => {
                                             <p>Tu número de recogida</p>
                                             <h2>#{numeroPedido}</h2>
                                         </div>
+                                        <button className="vb-btn-carrito btn-dark" onClick={() => {
+                                            setCarrito([]);
+                                            setPagoSolicitado(false);
+                                            setNumeroPedido(null);
+                                            setSeccionActiva('menu');
+                                        }} style={{ marginTop: '20px', width: '100%', maxWidth: '300px' }}>
+                                            NUEVO PEDIDO
+                                        </button>
                                     </div>
                                 )}
                             </div>

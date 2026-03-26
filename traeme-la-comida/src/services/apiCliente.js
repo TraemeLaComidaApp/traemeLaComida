@@ -51,6 +51,8 @@ export const submitOrder = async (mesaId, esBarra, numeroPedidoBarra, carrito, c
         const extraSum = item.extrasAplicados ? item.extrasAplicados.reduce((s, e) => s + (e.opcionSeleccionada?.suplemento || 0), 0) : 0;
         const totalPorUnidad = Number(item.producto.precio) + extraSum;
         const notasFromExtras = item.extrasAplicados ? item.extrasAplicados.map(e => e.opcionSeleccionada?.nombre).join(', ') : '';
+        const notasBase = item.notaPersonal || notasFromExtras;
+        const notaFinal = (esBarra && numeroPedidoBarra) ? `[Ticket #${numeroPedidoBarra}] ${notasBase}`.trim() : notasBase;
 
         const detPayload = {
             id_pedido: currentPedidoId,
@@ -58,7 +60,7 @@ export const submitOrder = async (mesaId, esBarra, numeroPedidoBarra, carrito, c
             cantidad: item.cantidad || 1,
             precio_unitario: totalPorUnidad,
             estado: 'no_servido', // Swagger equivalent logic for 'Pendiente' / waiting
-            notas: item.notaPersonal || notasFromExtras
+            notas: notaFinal
         };
 
         const detalleC = await fetchApi('/detalle-pedido', {
@@ -136,8 +138,7 @@ export const solicitarPago = async (mesaId, metodo = 'Efectivo') => {
         await fetchApi(`/pedido/${pedidoActivo.id}`, {
             method: 'PATCH',
             body: JSON.stringify({
-                estado: 'pendiente_cobro',
-                metodo_pago: metodo // Assuming the backend supports this field or we are adding it for consistency
+                estado: 'pendiente_cobro'
             })
         });
     }

@@ -14,7 +14,7 @@ export class SeleccionOpcionService {
       .from(this.tableName)
       .insert(createDto)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
     return data;
@@ -56,7 +56,7 @@ export class SeleccionOpcionService {
       .eq('id_detalle_pedido', idDetallePedido)
       .eq('id_opcion', idOpcion)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
     if (!data) throw new NotFoundException('Recurso no encontrado');
@@ -70,7 +70,7 @@ export class SeleccionOpcionService {
       .eq('id_detalle_pedido', idDetallePedido)
       .eq('id_opcion', idOpcion)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
     if (!data) throw new NotFoundException('Recurso no encontrado');

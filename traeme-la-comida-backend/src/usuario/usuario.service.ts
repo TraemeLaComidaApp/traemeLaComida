@@ -32,7 +32,7 @@ export class UsuarioService {
       .from('usuario')
       .select('*')
       .eq('id', id)
-      .single();
+      .maybeSingle();
 
     if (error) throw new NotFoundException(`Usuario con ID ${id} no encontrado`);
     return data;

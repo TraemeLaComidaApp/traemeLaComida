@@ -14,7 +14,7 @@ export class OpcionService {
       .from(this.tableName)
       .insert(createDto)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
     return data;
@@ -34,7 +34,7 @@ export class OpcionService {
       .from(this.tableName)
       .select('*')
       .eq('id', id)
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
     if (!data) throw new NotFoundException('Recurso no encontrado');
@@ -47,7 +47,7 @@ export class OpcionService {
       .update(updateDto)
       .eq('id', id)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
     if (!data) throw new NotFoundException('Recurso no encontrado');
@@ -60,7 +60,7 @@ export class OpcionService {
       .delete()
       .eq('id', id)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
     if (!data) throw new NotFoundException('Recurso no encontrado');
