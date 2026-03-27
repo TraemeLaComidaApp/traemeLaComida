@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import './VistaBarra.css';
 import { getMenuCliente } from '../services/apiMenuManager';
-import { 
-    submitOrder, 
-    getMesaByUuid, 
-    getPedidoActivo, 
-    getDetallesPedido, 
+import {
+    submitOrder,
+    getMesaByUuid,
+    getPedidoActivo,
+    getDetallesPedido,
     registrarPago,
     actualizarEstadoDetalle,
     solicitarPago as solicitarPagoApi
@@ -13,8 +13,10 @@ import {
 import { fetchApi } from '../services/apiClient';
 import { getConfiguracionLocal } from '../services/apiAuth';
 import { useParams } from 'react-router-dom';
+import { useCustomModal } from '../components/useCustomModal';
 
 const VistaBarra = () => {
+    const { showAlert, showConfirm, ModalComponent } = useCustomModal();
     const [seccionActiva, setSeccionActiva] = useState('menu');
     const [filtroActivo, setFiltroActivo] = useState('Todo');
     const [carrito, setCarrito] = useState([]);
@@ -88,7 +90,7 @@ const VistaBarra = () => {
         const hydrateAndPollBarra = async () => {
             try {
                 const pedido = await getPedidoActivo(idMesaBarra);
-                
+
                 // Si el pedido no existe, verificamos si tenemos cosas enviadas pendientes
                 if (!pedido) {
                     setCarrito(prev => {
@@ -172,7 +174,7 @@ const VistaBarra = () => {
                         [grupoId]: [...seleccionesActuales, opcion]
                     });
                 } else {
-                    alert(`Solo puedes seleccionar un máximo de ${max} opciones.`);
+                    showAlert(`Solo puedes seleccionar un máximo de ${max} opciones.`, "warning");
                 }
             }
         }
@@ -198,7 +200,7 @@ const VistaBarra = () => {
 
     const confirmarAgregarAlCarrito = () => {
         if (!validarSelecciones()) {
-            alert("Por favor, selecciona las opciones requeridas.");
+            showAlert("Por favor, selecciona las opciones requeridas.", "warning");
             return;
         }
         const precioFinal = calcularPrecioFinalItem();
@@ -238,7 +240,7 @@ const VistaBarra = () => {
             ? `¿Deseas confirmar el pago con ${metodoEnum} y mandar tu pedido a barra?`
             : `¿Avisar al personal para realizar el pago en barra con ${metodoEnum}?`;
 
-        if (window.confirm(mensaje)) {
+        if (await showConfirm(mensaje)) {
             const itemsPorEnviar = carrito.filter(item => !item.enviado);
             if (itemsPorEnviar.length === 0) return;
 
@@ -246,12 +248,12 @@ const VistaBarra = () => {
 
             try {
                 if (!idMesaBarra) {
-                    alert("No se ha podido identificar el ID de la barra en el sistema. Asegúrate de tener al menos una creada en el MapaEditor.");
+                    showAlert("No se ha podido identificar el ID de la barra en el sistema. Asegúrate de tener al menos una creada en el MapaEditor.", "error");
                     return;
                 }
 
                 await submitOrder(idMesaBarra, true, n_pedido_barra, itemsPorEnviar);
-                
+
                 const pedido = await getPedidoActivo(idMesaBarra);
                 if (pedido) {
                     const detalles = await getDetallesPedido(pedido.id);
@@ -268,7 +270,7 @@ const VistaBarra = () => {
                         await registrarPago(pedido.id, monto, metodoEnum);
                     }
                 }
-                
+
                 const carritoEnviado = carrito.map(item => ({ ...item, enviado: true }));
                 setCarrito(carritoEnviado);
                 setNumeroPedido(n_pedido_barra);
@@ -281,7 +283,7 @@ const VistaBarra = () => {
                 }
             } catch (err) {
                 console.error("Error al gestionar el pago de la barra", err);
-                alert("Uy. Algo salió mal creando tú pedido.");
+                showAlert("Uy. Algo salió mal creando tú pedido.", "error");
             }
         }
     };
@@ -705,6 +707,7 @@ const VistaBarra = () => {
                     </div>
                 </div>
             )}
+            <ModalComponent />
         </div>
     );
 };

@@ -14,8 +14,10 @@ import {
     finalizarPedido
 } from '../services/apiCliente';
 import { getConfiguracionLocal } from '../services/apiAuth';
+import { useCustomModal } from '../components/useCustomModal';
 
 const VistaCliente = () => {
+    const { showAlert, showConfirm, ModalComponent } = useCustomModal();
     const { uuid } = useParams();
     const [mesa, setMesa] = useState(null);
     const [mesaError, setMesaError] = useState(false);
@@ -166,7 +168,7 @@ const VistaCliente = () => {
                         [grupoId]: [...seleccionesActuales, opcion]
                     });
                 } else {
-                    alert(`Solo puedes seleccionar un máximo de ${max} opciones.`);
+                    showAlert(`Solo puedes seleccionar un máximo de ${max} opciones.`, 'warning');
                 }
             }
         }
@@ -192,7 +194,7 @@ const VistaCliente = () => {
 
     const confirmarAgregarAlCarrito = () => {
         if (!validarSelecciones()) {
-            alert("Por favor, selecciona las opciones requeridas.");
+            showAlert("Por favor, selecciona las opciones requeridas.", "warning");
             return;
         }
         const precioFinal = calcularPrecioFinalItem();
@@ -221,7 +223,7 @@ const VistaCliente = () => {
         if (itemsPorEnviar.length === 0) return;
 
         if (!mesa) {
-            alert('No se puede enviar el pedido: la mesa no ha sido identificada.');
+            showAlert('No se puede enviar el pedido: la mesa no ha sido identificada.', 'error');
             return;
         }
 
@@ -230,15 +232,15 @@ const VistaCliente = () => {
 
             const carritoEnviado = carrito.map(item => ({ ...item, enviado: true }));
             setCarrito(carritoEnviado);
-            alert('¡Pedido enviado a cocina!');
+            showAlert('¡Pedido enviado a cocina!', 'success');
         } catch (error) {
             console.error('Error al enviar pedido:', error);
-            alert('Hubo un error enviando tu pedido a cocina.');
+            showAlert('Hubo un error enviando tu pedido a cocina.', 'error');
         }
     };
 
     const llamarAlCamarero = async () => {
-        if (!camareroLlamado && window.confirm("¿Deseas llamar al camarero?")) {
+        if (!camareroLlamado && await showConfirm("¿Deseas llamar al camarero?")) {
             try {
                 if (mesa) await llamarCamareroApi(mesa.id);
                 setCamareroLlamado(true);
@@ -266,7 +268,7 @@ const VistaCliente = () => {
                 .map(({ index }) => index));
 
         if (indicesPagables.length === 0) {
-            alert("No hay artículos seleccionados o artículos pendientes de pago.");
+            showAlert("No hay artículos seleccionados o artículos pendientes de pago.", "warning");
             return;
         }
 
@@ -970,6 +972,8 @@ const VistaCliente = () => {
                     </div>
                 </>
             )}
+            
+            <ModalComponent />
         </div>
     );
 };
