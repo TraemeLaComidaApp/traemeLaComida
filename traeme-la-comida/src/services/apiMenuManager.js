@@ -1,6 +1,5 @@
 import { fetchApi } from './apiClient';
 
-// Función auxiliar para detectar IDs temporales creados por React (Date.now())
 const isNewItem = (id) => !id || (typeof id === 'number' && id > 1000000000000);
 
 export const getMenuCompletoAdmin = async () => {
@@ -26,9 +25,7 @@ export const getMenuCompletoAdmin = async () => {
                 id: cat.id,
                 nombre: cat.nombre,
                 orden: cat.orden,
-                // Mapeamos los productos de esta categoría
                 productos: prods.map(p => {
-                    // Buscamos qué grupos de opciones tiene enlazados ESTE producto
                     const prodRels = rels.filter(rel => rel.id_producto == p.id);
 
                     const gruposOpcionesFormated = prodRels.map(rel => {
@@ -40,10 +37,9 @@ export const getMenuCompletoAdmin = async () => {
                         return {
                             id: catOpcion.id,
                             nombre: catOpcion.nombre,
-                            // Extraemos min y max de la tabla puente (producto-categoria-opcion)
                             min_selecciones: rel.min_selecciones,
                             max_selecciones: rel.max_selecciones,
-                            orden: rel.orden, // Mantenemos el orden
+                            orden: rel.orden,
                             opciones: opcionesDelGrupo.map(op => ({
                                 id: op.id,
                                 nombre: op.nombre,
@@ -52,16 +48,23 @@ export const getMenuCompletoAdmin = async () => {
                         };
                     }).filter(Boolean);
 
+                    // NORMALIZACIÓN: Devolvemos nombres SQL y nombres Frontend
                     return {
                         id: p.id,
-                        catId: cat.id,
+                        id_categoria_producto: p.id_categoria_producto,
                         nombre: p.nombre,
+                        // Compatibilidad de descripción
+                        descripcion: p.descripcion,
                         desc: p.descripcion,
                         precio: p.precio,
+                        // Compatibilidad de imagen
+                        imagen_url: p.imagen_url,
                         img: p.imagen_url,
+                        // Compatibilidad de visibilidad
+                        disponible: p.disponible,
                         visible: p.disponible,
                         orden: p.orden,
-                        gruposOpciones: gruposOpcionesFormated // Añadimos las opciones al producto
+                        gruposOpciones: gruposOpcionesFormated
                     };
                 })
             };
@@ -76,19 +79,17 @@ export const getMenuCliente = async () => {
     const fullMenu = await getMenuCompletoAdmin();
     return fullMenu.map(cat => ({
         ...cat,
-        productos: cat.productos.filter(p => p.visible)
+        productos: cat.productos.filter(p => p.disponible)
     })).filter(cat => cat.productos.length > 0);
 };
 
 export const guardarMenuCompletoAdmin = async (categoriasConfig) => {
-    // Nos traemos los datos actuales para comparar y evitar duplicados de nombre
     const dbCatOpciones = await fetchApi('/categoria-opcion') || [];
     const dbOpciones = await fetchApi('/opcion') || [];
 
     for (const cat of categoriasConfig) {
         let catId = cat.id;
 
-        // 1. GUARDAR CATEGORÍA
         if (isNewItem(cat.id)) {
             const data = await fetchApi('/categoria-producto', {
                 method: 'POST',
@@ -104,144 +105,94 @@ export const guardarMenuCompletoAdmin = async (categoriasConfig) => {
 
         if (!catId) continue;
 
-        // 2. GUARDAR PRODUCTOS (Bucle que cuelga de la categoría)
         for (const prod of cat.productos) {
             let prodId = prod.id;
-            const prodPayload = {
-                id_categoria_producto: Number(catId),
-                nombre: String(prod.nombre),
-                descripcion: prod.desc ? String(prod.desc) : '',
-                precio: Number(prod.precio),
-                imagen_url: prod.img ? String(prod.img) : '',
-                disponible: Boolean(prod.visible),
-                orden: Number(prod.orden)
-            };
 
-            if (isNewItem(prod.id)) {
-                const data = await fetchApi('/producto', { method: 'POST', body: JSON.stringify(prodPayload) });
+            if (prod.imagen_url instanceof File || prod.img instanceof File) {
+                const file = (prod.imagen_url instanceof File) ? prod.imagen_url : prod.img;
+                const formData = new FormData();
+                formData.append('nombre', String(prod.nombre));
+                formData.append('descripcion', prod.descripcion || prod.desc || '');
+                formData.append('precio', String(prod.precio));
+                formData.append('id_categoria_producto', String(catId));
+                formData.append('disponible', String(Boolean(prod.disponible || prod.visible)));
+                formData.append('orden', String(Number(prod.orden)));
+                formData.append('imagen', file);
+
+                const endpoint = isNewItem(prod.id) ? '/producto/upload' : `/producto/upload/${prod.id}`;
+                const data = await fetchApi(endpoint, {
+                    method: isNewItem(prod.id) ? 'POST' : 'PATCH',
+                    body: formData
+                });
                 prodId = data?.id || data?.data?.id || (Array.isArray(data) && data[0]?.id);
             } else {
-                await fetchApi(`/producto/${prod.id}`, { method: 'PATCH', body: JSON.stringify(prodPayload) });
+                const prodPayload = {
+                    id_categoria_producto: Number(catId),
+                    nombre: String(prod.nombre),
+                    descripcion: prod.descripcion || prod.desc || '',
+                    precio: Number(prod.precio),
+                    imagen_url: prod.imagen_url || prod.img || '',
+                    disponible: Boolean(prod.disponible || prod.visible),
+                    orden: Number(prod.orden)
+                };
+
+                if (isNewItem(prod.id)) {
+                    const data = await fetchApi('/producto', { method: 'POST', body: JSON.stringify(prodPayload) });
+                    prodId = data?.id || data?.data?.id || (Array.isArray(data) && data[0]?.id);
+                } else {
+                    await fetchApi(`/producto/${prod.id}`, { method: 'PATCH', body: JSON.stringify(prodPayload) });
+                }
             }
 
             if (!prodId) continue;
 
-            // 3. LIMPIAR RELACIONES ANTIGUAS Y GUARDAR NUEVAS (producto-categoria-opcion)
-            // Primero eliminamos todas las relaciones existentes para este producto para evitar conflictos
             try {
-                // El backend debería soportar DELETE /producto-categoria-opcion/producto/:id
-                // Si no, tendremos que borrar una a una o el backend debe tener un endpoint de limpieza
-                // Según el controlador tenemos DELETE :idProducto/:idCategoriaOpcion
-                // Vamos a intentar obtener las actuales y borrarlas
                 const currentRels = await fetchApi(`/producto-categoria-opcion/producto/${prodId}`);
                 if (Array.isArray(currentRels)) {
                     for (const rel of currentRels) {
                         await fetchApi(`/producto-categoria-opcion/${prodId}/${rel.id_categoria_opcion}`, { method: 'DELETE' });
                     }
                 }
-            } catch (errClean) {
-                console.warn("No se pudieron limpiar las relaciones antiguas (puede que no existieran):", errClean);
-            }
+            } catch (errClean) { }
 
-            // 4. GUARDAR GRUPOS DE OPCIONES (Bucle que cuelga DEL PRODUCTO)
-            const gruposListosParaEsteProducto = [];
-
+            const gruposListos = [];
             if (prod.gruposOpciones && prod.gruposOpciones.length > 0) {
                 for (const grupo of prod.gruposOpciones) {
                     let grupoId = grupo.id;
-
-                    // A) Guardar el "Grupo" (Ej: Tipo de Leche)
                     if (isNewItem(grupo.id)) {
-                        // Buscamos si ya existe uno con el mismo nombre en la DB global
                         const existente = dbCatOpciones.find(g => g.nombre.toLowerCase() === grupo.nombre.toLowerCase());
-
-                        if (existente) {
-                            grupoId = existente.id;
-                        } else {
-                            const data = await fetchApi('/categoria-opcion', {
-                                method: 'POST',
-                                body: JSON.stringify({ nombre: String(grupo.nombre) })
-                            });
+                        if (existente) grupoId = existente.id;
+                        else {
+                            const data = await fetchApi('/categoria-opcion', { method: 'POST', body: JSON.stringify({ nombre: String(grupo.nombre) }) });
                             grupoId = data?.id || data?.data?.id || (Array.isArray(data) && data[0]?.id);
-                            // Actualizamos dbCatOpciones para que el siguiente producto lo encuentre
                             if (grupoId) dbCatOpciones.push({ id: grupoId, nombre: grupo.nombre });
                         }
                     } else {
-                        await fetchApi(`/categoria-opcion/${grupo.id}`, {
-                            method: 'PATCH',
-                            body: JSON.stringify({ nombre: String(grupo.nombre) })
-                        });
+                        await fetchApi(`/categoria-opcion/${grupo.id}`, { method: 'PATCH', body: JSON.stringify({ nombre: String(grupo.nombre) }) });
                     }
 
                     if (!grupoId) continue;
 
-                    // B) Guardar las "Opciones" de ese grupo (Ej: Avena, Soja)
                     for (const op of grupo.opciones) {
-                        let opId = op.id;
-                        const opPayload = {
-                            id_categoria_opcion: Number(grupoId),
-                            nombre: String(op.nombre),
-                            precio_extra: Number(op.suplemento) || 0.00
-                        };
-
+                        const opPayload = { id_categoria_opcion: Number(grupoId), nombre: String(op.nombre), precio_extra: Number(op.suplemento) || 0 };
                         if (isNewItem(op.id)) {
-                            const existente = dbOpciones.find(o => 
-                                o.nombre.toLowerCase() === op.nombre.toLowerCase() && 
-                                o.id_categoria_opcion == grupoId
-                            );
-
-                            if (existente) {
-                                opId = existente.id;
-                                await fetchApi(`/opcion/${opId}`, { method: 'PATCH', body: JSON.stringify(opPayload) });
-                            } else {
-                                const data = await fetchApi('/opcion', { method: 'POST', body: JSON.stringify(opPayload) });
-                                opId = data?.id || data?.data?.id || (Array.isArray(data) && data[0]?.id);
-                                if (opId) dbOpciones.push({ ...opPayload, id: opId });
-                            }
+                            const data = await fetchApi('/opcion', { method: 'POST', body: JSON.stringify(opPayload) });
+                            const newId = data?.id || (Array.isArray(data) && data[0]?.id);
+                            if (newId) dbOpciones.push({ ...opPayload, id: newId });
                         } else {
                             await fetchApi(`/opcion/${op.id}`, { method: 'PATCH', body: JSON.stringify(opPayload) });
                         }
                     }
-
-                    // Guardamos la info del grupo para crear la relación con este producto
-                    gruposListosParaEsteProducto.push({
-                        id: grupoId,
-                        min_selecciones: grupo.min_selecciones,
-                        max_selecciones: grupo.max_selecciones
-                    });
+                    gruposListos.push({ id: grupoId, min: grupo.min_selecciones, max: grupo.max_selecciones });
                 }
             }
 
-            // 5. CREAR LAS RELACIONES EN LA TABLA PUENTE (producto-categoria-opcion)
-            for (const [gListoIndex, gListo] of gruposListosParaEsteProducto.entries()) {
-                const relPayload = {
-                    id_producto: Number(prodId),
-                    id_categoria_opcion: Number(gListo.id),
-                    min_selecciones: Number(gListo.min_selecciones),
-                    max_selecciones: Number(gListo.max_selecciones),
-                    orden: gListoIndex
-                };
-
-                try {
-                    await fetchApi('/producto-categoria-opcion', {
-                        method: 'POST',
-                        body: JSON.stringify(relPayload)
-                    });
-                } catch (errRel) {
-                    console.error("Error vinculando producto con opción:", errRel);
-                }
+            for (const [idx, g] of gruposListos.entries()) {
+                await fetchApi('/producto-categoria-opcion', {
+                    method: 'POST',
+                    body: JSON.stringify({ id_producto: Number(prodId), id_categoria_opcion: Number(g.id), min_selecciones: Number(g.min), max_selecciones: Number(g.max), orden: idx })
+                });
             }
         }
-    }
-};
-
-// Se mantiene igual, es para la vista del camarero
-export const getProductosDisponibles = async () => {
-    try {
-        const data = await fetchApi('/producto') || [];
-        return data.filter(p => p.disponible).sort((a, b) => a.orden - b.orden);
-    } catch (error) {
-        console.error('Error fetching productos:', error);
-        return [];
     }
 };
