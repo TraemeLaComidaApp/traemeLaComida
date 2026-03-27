@@ -127,7 +127,7 @@ const MapaEditor = () => {
         height: `${el.alto}px`,
         transform: `translate(-50%, -50%) rotate(${el.rotacion}deg)`, // Centrado y Rotación real
         backgroundColor: el.tipo === 'barra' ? '#f8fafc' : '#fff',
-        border: sel ? '2px solid #ec9213' : '1px solid #cbd5e1',
+        border: sel ? '2px solid #000' : '2px solid #1e293b',
         borderRadius: '8px',
         display: 'flex',
         alignItems: 'center',
@@ -143,8 +143,9 @@ const MapaEditor = () => {
 
     return (
         <div className="mapa-editor-main">
-            <div className="mapa-editor-tabs no-scrollbar">
-                {salas.map(sTab => (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', gap: '15px', flexWrap: 'wrap' }}>
+                <div className="mapa-editor-tabs no-scrollbar" style={{ margin: 0, flex: 1 }}>
+                    {salas.map(sTab => (
                     <div key={sTab.id} className="tab-wrapper" style={{ display: 'flex', alignItems: 'center' }}>
                         <button
                             className={`tab-btn ${salaActivaId === sTab.id ? 'active' : ''}`}
@@ -179,6 +180,8 @@ const MapaEditor = () => {
                 >
                     + Nueva Sala
                 </button>
+                </div>
+                <button onClick={guardarPlano} className="btn-save-plano">Guardar Plano</button>
             </div>
 
             <div className="mapa-editor-toolbar">
@@ -209,7 +212,6 @@ const MapaEditor = () => {
                         <input type="number" value={salaActiva.anchoSala} onChange={(e) => actualizarSalaConfig({ anchoSala: e.target.value })} /> x
                         <input type="number" value={salaActiva.altoSala} onChange={(e) => actualizarSalaConfig({ altoSala: e.target.value })} />
                     </span>
-                    <button onClick={guardarPlano} className="btnTool btn-save">Guardar Plano</button>
                 </div>
             </div>
 

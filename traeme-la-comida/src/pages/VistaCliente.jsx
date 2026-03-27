@@ -347,6 +347,13 @@ const VistaCliente = () => {
                     const nuevoCarritoTemp = carrito.map((it, idx) => indices.includes(idx) ? { ...it, estadoPago: 'pagado' } : it);
                     if (nuevoCarritoTemp.every(it => it.estadoPago === 'pagado')) {
                         await finalizarPedido(pedido.id, mesa.id);
+                        if (configNegocio.link_resenas_google) {
+                            setTimeout(async () => {
+                                if (await showConfirm("Para nosotros es muy importante tu opinión, ¿Nos ayudas con una reseña en Google?", "¡Gracias por tu visita!", "Claro que sí", "En otro momento")) {
+                                    window.open(configNegocio.link_resenas_google, '_blank');
+                                }
+                            }, 500);
+                        }
                     }
                 }
             } catch (err) {
@@ -397,6 +404,13 @@ const VistaCliente = () => {
             const pedido = await getPedidoActivo(mesa.id);
             if (pedido) {
                 await finalizarPedido(pedido.id, mesa.id);
+                if (configNegocio.link_resenas_google) {
+                    setTimeout(async () => {
+                        if (await showConfirm("Para nosotros es muy importante tu opinión, ¿Nos ayudas con una reseña en Google?", "¡Gracias por tu visita!", "Claro que sí", "En otro momento")) {
+                            window.open(configNegocio.link_resenas_google, '_blank');
+                        }
+                    }, 500);
+                }
             }
         }
     };
@@ -467,7 +481,7 @@ const VistaCliente = () => {
     if (cargandoMenu) {
         return (
             <div className="vista-cliente-wrapper" style={{ alignItems: 'center' }}>
-                <div style={{ textAlign: 'center', color: '#ec9213' }}>
+                <div style={{ textAlign: 'center', color: 'var(--primary)' }}>
                     <span className="material-symbols-outlined vc-icon-spin" style={{ fontSize: '40px' }}>autorenew</span>
                     <p style={{ fontWeight: 'bold' }}>Cargando carta...</p>
                 </div>
@@ -592,7 +606,7 @@ const VistaCliente = () => {
                                                                 ) : item.estadoPago === 'solicitado_mesa' ? (
                                                                     <small style={{ color: '#3b82f6', marginLeft: '5px' }}>⏳ ESPERANDO COBRO</small>
                                                                 ) : (
-                                                                    item.enviado && <small style={{ color: '#ec9213', marginLeft: '5px' }}>👨‍🍳 EN COCINA</small>
+                                                                    item.enviado && <small style={{ color: 'var(--primary)', marginLeft: '5px' }}>👨‍🍳 EN COCINA</small>
                                                                 )}
                                                             </span>
                                                             <span className="vc-pedido-price">{item.precioFinal.toFixed(2)}€</span>
@@ -633,7 +647,7 @@ const VistaCliente = () => {
                                     {totalPendientePago > 0 && totalPendientePago !== totalPrecioCarrito && (
                                         <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontWeight: 'bold', marginTop: '10px' }}>
                                             <span>Pendiente de pago</span>
-                                            <span style={{ color: '#ec9213' }}>{totalPendientePago.toFixed(2)}€</span>
+                                            <span style={{ color: 'var(--primary)' }}>{totalPendientePago.toFixed(2)}€</span>
                                         </div>
                                     )}
 
@@ -908,9 +922,9 @@ const VistaCliente = () => {
                     <div className="vc-product-sheet" style={{ height: 'auto', paddingBottom: '30px' }}>
                         <div style={{ padding: '25px 20px', textAlign: 'center' }}>
                             <div style={{ 
-                                width: '60px', height: '60px', backgroundColor: '#fff7ed', borderRadius: '50%', 
+                                width: '60px', height: '60px', backgroundColor: 'var(--primary-soft)', borderRadius: '50%', 
                                 display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px',
-                                color: '#ec9213'
+                                color: 'var(--primary)'
                             }}>
                                 <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>payments</span>
                             </div>
@@ -936,7 +950,7 @@ const VistaCliente = () => {
                                     }}
                                     style={{ 
                                         padding: '16px', borderRadius: '12px', border: 'none', 
-                                        backgroundColor: '#ec9213', color: 'white', fontWeight: 'bold', 
+                                        backgroundColor: 'var(--primary)', color: 'white', fontWeight: 'bold', 
                                         fontSize: '16px', cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(236,146,19, 0.2)' 
                                     }}
                                 >

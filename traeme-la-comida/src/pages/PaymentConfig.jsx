@@ -42,7 +42,7 @@ export default function PaymentConfig() {
             </div>
 
             <div className="alert-box">
-                <span className="material-symbols-outlined" style={{ color: '#ec9213' }}>verified_user</span>
+                <span className="material-symbols-outlined" style={{ color: 'var(--primary)' }}>verified_user</span>
                 <p>La pasarela de pago ha sido configurada correctamente por el administrador.</p>
             </div>
 

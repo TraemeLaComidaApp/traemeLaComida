@@ -65,7 +65,7 @@
 
 .form-group input:focus {
     outline: none;
-    border-color: #ec9213;
+    border-color: var(--primary);
     box-shadow: 0 0 0 3px rgba(236, 146, 19, 0.1);
 }
 
@@ -214,7 +214,7 @@
 
 .btn-save-negocio {
     padding: 14px 30px;
-    background: #ec9213;
+    background: var(--primary);
     color: white;
     border: none;
     border-radius: 10px;
@@ -225,7 +225,7 @@
 }
 
 .btn-save-negocio:hover {
-    background: #d98211;
+    filter: brightness(0.9);
 }
 
 .btn-save-negocio:active {

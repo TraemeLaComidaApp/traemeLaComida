@@ -59,7 +59,7 @@ export const useCustomModal = () => {
                     <div className="custom-modal-icon">
                         {type === 'success' && <span className="material-symbols-outlined" style={{color: '#34a853'}}>check_circle</span>}
                         {type === 'error' && <span className="material-symbols-outlined" style={{color: '#ef4444'}}>error</span>}
-                        {type === 'warning' && <span className="material-symbols-outlined" style={{color: '#ec9213'}}>warning</span>}
+                        {type === 'warning' && <span className="material-symbols-outlined" style={{color: 'var(--primary)'}}>warning</span>}
                         {type === 'info' && <span className="material-symbols-outlined" style={{color: '#3b82f6'}}>info</span>}
                         {type === 'confirm' && <span className="material-symbols-outlined" style={{color: '#8b5cf6'}}>help</span>}
                     </div>

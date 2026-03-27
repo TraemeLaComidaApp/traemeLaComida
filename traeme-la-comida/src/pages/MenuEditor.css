@@ -114,9 +114,9 @@
 }
 
 .btn-edit-category:hover {
-    background: #fff7ed;
-    border-color: #ec9213;
-    color: #ec9213;
+    background: var(--primary-soft);
+    border-color: var(--primary);
+    color: var(--primary);
 }
 
 .delete-cat-btn {
@@ -155,8 +155,8 @@
 }
 
 .option-badge {
-    background: #fff7ed;
-    color: #ec9213;
+    background: var(--primary-soft);
+    color: var(--primary);
     border: 1px solid #fed7aa;
     padding: 4px 10px;
     border-radius: 20px;
@@ -206,7 +206,7 @@
 }
 
 .price {
-    color: #ec9213;
+    color: var(--primary);
     font-weight: 700;
     margin: 0;
 }
@@ -230,8 +230,8 @@
 }
 
 .icon-btn.active {
-    color: #ec9213;
-    background: #fff7ed;
+    color: var(--primary);
+    background: var(--primary-soft);
 }
 
 .icon-btn.delete {
@@ -506,7 +506,7 @@
 .btn-add-option {
     background: none;
     border: none;
-    color: #ec9213;
+    color: var(--primary);
     font-weight: 700;
     font-size: 13px;
     cursor: pointer;
@@ -538,7 +538,7 @@
 }
 
 .btn-save {
-    background: #ec9213;
+    background: var(--primary);
     color: white;
     border: none;
     padding: 10px 20px;
@@ -678,7 +678,7 @@
     cursor: pointer;
     width: 16px;
     height: 16px;
-    accent-color: #ec9213;
+    accent-color: var(--primary);
 }
 
 /* Separación extra para el footer del modal porque los botones estaban pegados */
@@ -692,7 +692,7 @@
 }
 
 .modal-footer .btn-save {
-    background: #ec9213;
+    background: var(--primary);
     color: white;
     border: none;
     padding: 10px 16px;
@@ -703,21 +703,19 @@
 
 /* ACTUALIZA LA CLASE btn-save-all YA EXISTENTE POR ESTA: */
 .btn-save-all {
-    background: var(--primary);
-    /* CAMBIADO AL NARANJA */
-    color: white;
+    background: #e2e8f0;
+    color: #000;
     border: none;
     padding: 12px 24px;
     border-radius: 10px;
-    font-weight: 700;
+    font-weight: 800;
     cursor: pointer;
     white-space: nowrap;
-    box-shadow: 0 4px 10px rgba(236, 146, 19, 0.3);
-    /* Sombra naranja */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
 }
 
 .btn-save-all:hover {
-    background: #e0820b;
+    background: #cbd5e1;
 }
 
 /* =========================================================

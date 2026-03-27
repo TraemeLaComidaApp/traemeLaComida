@@ -29,14 +29,14 @@
 }
 
 .tab-btn.active {
-    background-color: #ec9213;
-    color: #fff;
+    background-color: var(--primary);
+    color: #000;
 }
 
 .tab-btn-add {
     border: none;
     background: none;
-    color: #ec9213;
+    color: var(--primary);
     cursor: pointer;
     font-weight: bold;
 }
@@ -103,10 +103,21 @@
     border-color: #fecaca;
 }
 
-.btn-save {
-    background: #ec9213;
-    color: #fff;
+.btn-save-plano {
+    background: #e2e8f0;
+    color: #000;
     border: none;
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    white-space: nowrap;
+    transition: background 0.2s;
+}
+
+.btn-save-plano:hover {
+    background: #cbd5e1;
 }
 
 .btn-rename {
@@ -145,7 +156,7 @@
 .grid-canvas {
     background-color: #fff;
     position: relative;
-    border: 2px solid #ec9213;
+    border: 2px solid var(--primary);
     background-image: radial-gradient(#e2e8f0 1px, transparent 1px);
     background-size: 20px 20px;
     touch-action: none;
@@ -235,7 +246,7 @@
 
 .btn-download {
     text-decoration: none;
-    background: #ec9213;
+    background: var(--primary);
     color: #fff;
     padding: 8px 15px;
     border-radius: 6px;
@@ -288,7 +299,7 @@
 }
 
 .btn-create-first {
-    background-color: #ec9213;
+    background-color: var(--primary);
     color: #fff;
     border: none;
     padding: 12px 24px;

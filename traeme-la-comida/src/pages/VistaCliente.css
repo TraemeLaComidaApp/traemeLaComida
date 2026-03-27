@@ -2,8 +2,6 @@
    1. VARIABLES GLOBALES Y RESET
 ========================================================= */
 :root {
-    --primary: #ec9213;
-    --primary-light: #fef4e6;
     --text-dark: #1a1a1a;
     --text-muted: #666;
     --text-light: #94a3b8;
@@ -150,7 +148,7 @@
     border-radius: var(--radius-xl);
     padding: 25px;
     margin-bottom: 20px;
-    border: 1px solid #fde6c7;
+    border: 1px solid var(--primary-light);
     display: flex;
     align-items: center;
     justify-content: space-between;

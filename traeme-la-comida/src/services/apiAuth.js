@@ -62,13 +62,15 @@ export const getConfiguracionLocal = async () => {
     }
 };
 
-export const updateConfiguracionLocal = async (configId, nombre_local, logo_data) => {
+export const updateConfiguracionLocal = async (configId, nombre_local, logo_data, color_primario, link_resenas_google) => {
     try {
         // --- 1. SI ES UN ARCHIVO FÍSICO (NUEVA FOTO) ---
         if (logo_data instanceof File) {
             const formData = new FormData();
             formData.append('nombre_local', nombre_local);
             formData.append('logo', logo_data);
+            if (color_primario) formData.append('color_primario', color_primario);
+            if (link_resenas_google !== undefined) formData.append('link_resenas_google', link_resenas_google);
 
             // Como fetchApi es inteligente, le pasamos el endpoint limpio y el FormData directo
             const endpoint = configId
@@ -87,7 +89,9 @@ export const updateConfiguracionLocal = async (configId, nombre_local, logo_data
                 method: 'PATCH',
                 body: JSON.stringify({
                     nombre_local,
-                    logo_url: typeof logo_data === 'string' ? logo_data : null
+                    logo_url: typeof logo_data === 'string' ? logo_data : null,
+                    color_primario,
+                    link_resenas_google
                 })
             });
         } else {
@@ -95,7 +99,9 @@ export const updateConfiguracionLocal = async (configId, nombre_local, logo_data
                 method: 'POST',
                 body: JSON.stringify({
                     nombre_local,
-                    logo_url: typeof logo_data === 'string' ? logo_data : null
+                    logo_url: typeof logo_data === 'string' ? logo_data : null,
+                    color_primario,
+                    link_resenas_google
                 })
             });
         }

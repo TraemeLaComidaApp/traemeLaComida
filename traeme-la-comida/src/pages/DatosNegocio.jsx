@@ -7,6 +7,8 @@ const DatosNegocio = ({ nombreActual, alGuardarNombre }) => {
     const [nombreLocal, setNombreLocal] = useState(nombreActual);
     const [logo, setLogo] = useState(null); // Para mostrar la vista previa en pantalla
     const [logoArchivoFisico, setLogoArchivoFisico] = useState(null); // NUEVO: Para enviar al servidor
+    const [colorPrimario, setColorPrimario] = useState('#ec9213');
+    const [linkResenas, setLinkResenas] = useState('');
 
     // --- ESTADOS: CREDENCIALES PROPIETARIO ---
     const [usuarioPropietario, setUsuarioPropietario] = useState('propietario');
@@ -31,6 +33,8 @@ const DatosNegocio = ({ nombreActual, alGuardarNombre }) => {
                     setConfigId(config.id);
                     setNombreLocal(config.nombre_local || nombreActual);
                     setLogo(config.logo_url || null);
+                    if (config.color_primario) setColorPrimario(config.color_primario);
+                    if (config.link_resenas_google) setLinkResenas(config.link_resenas_google);
                     if (config.nombre_local) alGuardarNombre(config.nombre_local);
                 }
 
@@ -69,7 +73,7 @@ const DatosNegocio = ({ nombreActual, alGuardarNombre }) => {
             // Enviamos el archivo real si han subido uno nuevo, si no, enviamos la URL antigua
             const dataAAgregar = logoArchivoFisico ? logoArchivoFisico : logo;
 
-            await updateConfiguracionLocal(configId, nombreLocal, dataAAgregar);
+            await updateConfiguracionLocal(configId, nombreLocal, dataAAgregar, colorPrimario, linkResenas);
             await updateCredencial('propietario', usuarioPropietario, passPropietario, emailPropietario);
             await updateCredencial('camarero', usuarioCamarero, pinCamarero, null);
             await updateCredencial('cocina', usuarioCocina, pinCocina, null);
@@ -84,6 +88,19 @@ const DatosNegocio = ({ nombreActual, alGuardarNombre }) => {
         } catch (error) {
             console.error("Error al guardar datos:", error);
             alert("Error al guardar. Verifica la consola.");
+        }
+    };
+
+    const manejarVistaPrevia = () => {
+        if (!colorPrimario) return;
+        document.documentElement.style.setProperty('--primary', colorPrimario);
+        const hex = colorPrimario.startsWith('#') ? colorPrimario.slice(1) : colorPrimario;
+        if (hex.length === 6) {
+            const r = parseInt(hex.slice(0, 2), 16);
+            const g = parseInt(hex.slice(2, 4), 16);
+            const b = parseInt(hex.slice(4, 6), 16);
+            document.documentElement.style.setProperty('--primary-light', `rgba(${r}, ${g}, ${b}, 0.1)`);
+            document.documentElement.style.setProperty('--primary-soft', `rgba(${r}, ${g}, ${b}, 0.1)`);
         }
     };
 
@@ -129,6 +146,30 @@ const DatosNegocio = ({ nombreActual, alGuardarNombre }) => {
                             <p>Recomendado: PNG o JPG cuadrado (min. 512x512px)</p>
                         </div>
                     </div>
+                </div>
+
+                <div className="form-group">
+                    <label>Color Principal de la App (Opcional)</label>
+                    <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                        <input
+                            type="color"
+                            value={colorPrimario}
+                            onChange={(e) => setColorPrimario(e.target.value)}
+                            style={{ height: '40px', width: '60px', cursor: 'pointer', border: 'none', borderRadius: '4px', padding: '0' }}
+                        />
+                        <button type="button" className="btn-upload" onClick={manejarVistaPrevia} style={{ margin: 0 }}>Vista Previa</button>
+                    </div>
+                </div>
+
+                <div className="form-group">
+                    <label>Enlace de Reseñas de Google (Opcional)</label>
+                    <input
+                        type="url"
+                        value={linkResenas}
+                        onChange={(e) => setLinkResenas(e.target.value)}
+                        placeholder="https://g.page/r/..."
+                    />
+                    <p style={{ fontSize: '13px', color: '#64748b', marginTop: '6px' }}>Se sugerirá a los clientes que dejen una reseña tras completar su pago.</p>
                 </div>
             </div>
 

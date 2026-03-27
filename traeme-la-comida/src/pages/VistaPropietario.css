@@ -1,6 +1,5 @@
 /* Variables locales para que no dependa de index.css */
 .admin-container {
-    --primary: #ec9213;
     --primary-light: #fef4e6;
     --text-muted: #64748b;
     --bg-surface: #ffffff;
@@ -208,7 +207,7 @@
 
 .login-icon {
     font-size: 48px;
-    color: var(--primary, #ec9213);
+    color: var(--primary, var(--primary));
     background: #fef4e6;
     padding: 15px;
     border-radius: 50%;
@@ -251,7 +250,7 @@
 
 .login-form input:focus {
     outline: none;
-    border-color: var(--primary, #ec9213);
+    border-color: var(--primary, var(--primary));
 }
 
 .login-error {
@@ -269,7 +268,7 @@
 .btn-login {
     width: 100%;
     padding: 15px;
-    background-color: var(--primary, #ec9213);
+    background-color: var(--primary, var(--primary));
     color: white;
     border: none;
     border-radius: 10px;
@@ -324,7 +323,7 @@
 .link-olvido {
     background: none;
     border: none;
-    color: var(--primary, #ec9213);
+    color: var(--primary, var(--primary));
     font-size: 12px;
     font-weight: 700;
     cursor: pointer;

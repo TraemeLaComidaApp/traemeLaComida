@@ -277,6 +277,13 @@ const VistaBarra = () => {
 
                 if (esDigital) {
                     setPagoSolicitado(true);
+                    if (configNegocio.link_resenas_google) {
+                        setTimeout(async () => {
+                            if (await showConfirm("Para nosotros es muy importante tu opinión, ¿Nos ayudas con una reseña en Google?", "¡Tu pedido está en cocina!", "Claro que sí", "En otro momento")) {
+                                window.open(configNegocio.link_resenas_google, '_blank');
+                            }
+                        }, 500);
+                    }
                 } else {
                     await solicitarPagoApi(idMesaBarra, metodoEnum);
                     setEsperandoCobro(true);
@@ -339,7 +346,7 @@ const VistaBarra = () => {
     if (cargandoMenu) {
         return (
             <div className="vb-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ textAlign: 'center', color: '#ec9213' }}>
+                <div style={{ textAlign: 'center', color: 'var(--primary)' }}>
                     <span className="material-symbols-outlined vb-icon-spin" style={{ fontSize: '40px' }}>autorenew</span>
                     <p style={{ fontWeight: 'bold' }}>Cargando carta de barra...</p>
                 </div>

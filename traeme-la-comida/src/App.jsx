@@ -21,6 +21,23 @@ function App() {
           }
           link.href = config.logo_url;
         }
+
+        if (config && config.color_primario) {
+          document.documentElement.style.setProperty('--primary', config.color_primario);
+          // Calculate an RGBA soft color based on the HEX color
+          const hex = config.color_primario.startsWith('#') ? config.color_primario.slice(1) : config.color_primario;
+          if (hex.length === 6) {
+            const r = parseInt(hex.slice(0, 2), 16);
+            const g = parseInt(hex.slice(2, 4), 16);
+            const b = parseInt(hex.slice(4, 6), 16);
+            document.documentElement.style.setProperty('--primary-soft', `rgba(${r}, ${g}, ${b}, 0.1)`);
+          }
+        } else {
+          // Fallback colors if none is set
+          document.documentElement.style.setProperty('--primary', '#ec9213');
+          document.documentElement.style.setProperty('--primary-light', '#fef4e6');
+          document.documentElement.style.setProperty('--primary-soft', '#fff7ed');
+        }
       } catch (error) {
         console.error("Error fetching config for favicon:", error);
       }
