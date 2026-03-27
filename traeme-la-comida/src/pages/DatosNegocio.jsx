@@ -5,7 +5,8 @@ import { getConfiguracionLocal, getCredenciales, updateConfiguracionLocal, updat
 const DatosNegocio = ({ nombreActual, alGuardarNombre }) => {
     // --- ESTADOS: DATOS GENERALES ---
     const [nombreLocal, setNombreLocal] = useState(nombreActual);
-    const [logo, setLogo] = useState(null);
+    const [logo, setLogo] = useState(null); // Para mostrar la vista previa en pantalla
+    const [logoArchivoFisico, setLogoArchivoFisico] = useState(null); // NUEVO: Para enviar al servidor
 
     // --- ESTADOS: CREDENCIALES PROPIETARIO ---
     const [usuarioPropietario, setUsuarioPropietario] = useState('propietario');
@@ -52,25 +53,31 @@ const DatosNegocio = ({ nombreActual, alGuardarNombre }) => {
             }
         };
         cargarDatos();
-    }, []);
+    }, [nombreActual, alGuardarNombre]);
 
     // --- FUNCIONES ---
     const manejarLogo = (e) => {
         const file = e.target.files[0];
         if (file) {
-            setLogo(URL.createObjectURL(file));
+            setLogoArchivoFisico(file); // Guardamos el archivo binario
+            setLogo(URL.createObjectURL(file)); // Mostramos la previsualización temporal
         }
     };
 
     const manejarGuardar = async () => {
         try {
-            await updateConfiguracionLocal(configId, nombreLocal, logo);
+            // Enviamos el archivo real si han subido uno nuevo, si no, enviamos la URL antigua
+            const dataAAgregar = logoArchivoFisico ? logoArchivoFisico : logo;
+
+            await updateConfiguracionLocal(configId, nombreLocal, dataAAgregar);
             await updateCredencial('propietario', usuarioPropietario, passPropietario, emailPropietario);
             await updateCredencial('camarero', usuarioCamarero, pinCamarero, null);
             await updateCredencial('cocina', usuarioCocina, pinCocina, null);
 
-            // Al guardar, actualizamos el nombre en el componente superior
             alGuardarNombre(nombreLocal);
+
+            // Limpiamos el archivo físico pendiente
+            setLogoArchivoFisico(null);
 
             setGuardadoExito(true);
             setTimeout(() => setGuardadoExito(false), 3000);

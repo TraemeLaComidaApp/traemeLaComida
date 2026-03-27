@@ -1,18 +1,41 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiTags, ApiOperation, ApiConsumes, ApiBody } from '@nestjs/swagger';
+//import { Express } from 'express';
 import { ConfiguracionLocalService } from './configuracion-local.service';
 import { CreateConfiguracionLocalDto } from './dto/create-configuracion-local.dto';
 import { UpdateConfiguracionLocalDto } from './dto/update-configuracion-local.dto';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
 @ApiTags('ConfiguracionLocal')
 @Controller('configuracion-local')
 export class ConfiguracionLocalController {
-  constructor(private readonly service: ConfiguracionLocalService) {}
+  constructor(private readonly service: ConfiguracionLocalService) { }
 
   @Post()
-  @ApiOperation({ summary: 'Crear un registro en ConfiguracionLocal' })
+  @ApiOperation({ summary: 'Crear un registro en ConfiguracionLocal (Solo texto)' })
   create(@Body() createDto: CreateConfiguracionLocalDto) {
     return this.service.create(createDto);
+  }
+
+  // --- NUEVO: Endpoint para CREAR enviando un archivo físico ---
+  @Post('upload')
+  @ApiOperation({ summary: 'Crear un registro subiendo el Logo físico' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        nombre_local: { type: 'string' },
+        logo: { type: 'string', format: 'binary' },
+      },
+    },
+  })
+  @UseInterceptors(FileInterceptor('logo'))
+  createWithLogo(
+    @Body() body: { nombre_local: string },
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.service.upsertWithLogo(null, body.nombre_local, file);
   }
 
   @Get()
@@ -28,9 +51,31 @@ export class ConfiguracionLocalController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Actualizar un registro en ConfiguracionLocal' })
+  @ApiOperation({ summary: 'Actualizar un registro en ConfiguracionLocal (Solo texto)' })
   update(@Param('id') id: string, @Body() updateDto: UpdateConfiguracionLocalDto) {
     return this.service.update(+id, updateDto);
+  }
+
+  // --- NUEVO: Endpoint para ACTUALIZAR enviando un archivo físico ---
+  @Patch('upload/:id')
+  @ApiOperation({ summary: 'Actualizar un registro subiendo un Logo físico' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        nombre_local: { type: 'string' },
+        logo: { type: 'string', format: 'binary' },
+      },
+    },
+  })
+  @UseInterceptors(FileInterceptor('logo'))
+  updateWithLogo(
+    @Param('id') id: string,
+    @Body() body: { nombre_local: string },
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.service.upsertWithLogo(+id, body.nombre_local, file);
   }
 
   @Delete(':id')
