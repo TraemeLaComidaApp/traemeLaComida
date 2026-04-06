@@ -14,8 +14,11 @@ import { fetchApi } from '../services/apiClient';
 import { getConfiguracionLocal } from '../services/apiAuth';
 import { useParams } from 'react-router-dom';
 import { useCustomModal } from '../components/useCustomModal';
+import { useTranslation, Trans } from 'react-i18next';
+import LanguageSelector from '../components/LanguageSelector';
 
 const VistaBarra = () => {
+    const { t } = useTranslation();
     const { showAlert, showConfirm, ModalComponent } = useCustomModal();
     const [seccionActiva, setSeccionActiva] = useState('menu');
     const [filtroActivo, setFiltroActivo] = useState('Todo');
@@ -174,7 +177,7 @@ const VistaBarra = () => {
                         [grupoId]: [...seleccionesActuales, opcion]
                     });
                 } else {
-                    showAlert(`Solo puedes seleccionar un máximo de ${max} opciones.`, "warning");
+                    showAlert(t('max_opciones_alert', {max}), "warning");
                 }
             }
         }
@@ -200,7 +203,7 @@ const VistaBarra = () => {
 
     const confirmarAgregarAlCarrito = () => {
         if (!validarSelecciones()) {
-            showAlert("Por favor, selecciona las opciones requeridas.", "warning");
+            showAlert(t('Modal_opciones_req'), "warning");
             return;
         }
         const precioFinal = calcularPrecioFinalItem();
@@ -236,9 +239,12 @@ const VistaBarra = () => {
         }
 
         const esDigital = metodoEnum === 'Bizum' || metodoEnum === 'GooglePay';
+        const metodoTranslated = metodoEnum === 'Efectivo' ? String(t('efectivo')).toLowerCase() : 
+                                 metodoEnum === 'Tarjeta' ? String(t('tarjeta')).toLowerCase() : metodoEnum;
+        
         const mensaje = esDigital
-            ? `¿Deseas confirmar el pago con ${metodoEnum} y mandar tu pedido a barra?`
-            : `¿Avisar al personal para realizar el pago en barra con ${metodoEnum}?`;
+            ? t('Confirm_pago_digital_barra', {metodo: metodoEnum})
+            : t('Confirm_pago_fisico_barra', {metodo: metodoTranslated});
 
         if (await showConfirm(mensaje)) {
             const itemsPorEnviar = carrito.filter(item => !item.enviado);
@@ -248,7 +254,7 @@ const VistaBarra = () => {
 
             try {
                 if (!idMesaBarra) {
-                    showAlert("No se ha podido identificar el ID de la barra en el sistema. Asegúrate de tener al menos una creada en el MapaEditor.", "error");
+                    showAlert(t('Error_id_barra'), "error");
                     return;
                 }
 
@@ -279,7 +285,7 @@ const VistaBarra = () => {
                     setPagoSolicitado(true);
                     if (configNegocio.link_resenas_google) {
                         setTimeout(async () => {
-                            if (await showConfirm("Para nosotros es muy importante tu opinión, ¿Nos ayudas con una reseña en Google?", "¡Tu pedido está en cocina!", "Claro que sí", "En otro momento")) {
+                            if (await showConfirm(t("Review_google_title"), t("Review_google_desc_barra"), t("Review_google_yes"), t("Review_google_no"))) {
                                 window.open(configNegocio.link_resenas_google, '_blank');
                             }
                         }, 500);
@@ -290,7 +296,7 @@ const VistaBarra = () => {
                 }
             } catch (err) {
                 console.error("Error al gestionar el pago de la barra", err);
-                showAlert("Uy. Algo salió mal creando tú pedido.", "error");
+                showAlert(t('Algo_salio_mal'), "error");
             }
         }
     };
@@ -301,19 +307,19 @@ const VistaBarra = () => {
 
     const iniciarEscuchaVoz = () => {
         setEstadoVoz('escuchando');
-        setMensajeVoz("Dime qué quieres pedir...");
+        setMensajeVoz(t('Escuchando_voz'));
     };
 
     const detenerEscuchaVoz = () => {
         setEstadoVoz('procesando');
-        setMensajeVoz("Procesando tu audio...");
+        setMensajeVoz(t('Procesando_voz'));
 
         setTimeout(() => {
             const exito = Math.random() > 0.3;
 
             if (exito) {
                 setEstadoVoz('exito');
-                setMensajeVoz("¡Entendido! Añadiendo Croissant al pedido...");
+                setMensajeVoz(t('Exito_voz'));
 
                 const prodSimulado = menuData.length > 2 ? menuData[2].productos[0] : null;
 
@@ -334,7 +340,7 @@ const VistaBarra = () => {
 
             } else {
                 setEstadoVoz('error');
-                setMensajeVoz("No te he entendido bien. Había mucho ruido o el producto no está en carta.");
+                setMensajeVoz(t('Error_voz'));
             }
         }, 1500);
     };
@@ -348,7 +354,7 @@ const VistaBarra = () => {
             <div className="vb-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <div style={{ textAlign: 'center', color: 'var(--primary)' }}>
                     <span className="material-symbols-outlined vb-icon-spin" style={{ fontSize: '40px' }}>autorenew</span>
-                    <p style={{ fontWeight: 'bold' }}>Cargando carta de barra...</p>
+                    <p style={{ fontWeight: 'bold' }}>{t('Cargando_carta_barra')}</p>
                 </div>
             </div>
         )
@@ -369,20 +375,19 @@ const VistaBarra = () => {
                         )}
                     </div>
                     <h2>{configNegocio.nombre_local} (Barra)</h2>
+                    <LanguageSelector />
                 </header>
 
                 <nav className="vb-nav">
                     <span
                         className={`vb-nav-link ${seccionActiva === 'menu' ? 'active' : ''} ${(pagoSolicitado || esperandoCobro) && seccionActiva !== 'menu' ? 'disabled' : ''}`}
                         onClick={() => !pagoSolicitado && !esperandoCobro && setSeccionActiva('menu')}
-                    >
-                        MENÚ
-                    </span>
+                    > {t('MENU')} </span>
                     <span
                         className={`vb-nav-link ${seccionActiva === 'pedido' ? 'active' : ''}`}
                         onClick={() => setSeccionActiva('pedido')}
                     >
-                        MI PEDIDO {carrito.length > 0 && !pagoSolicitado && <div className="vb-badge-nav">{carrito.length}</div>}
+                        {t('MI PEDIDO')} {carrito.length > 0 && !pagoSolicitado && <div className="vb-badge-nav">{carrito.length}</div>}
                     </span>
                 </nav>
 
@@ -390,10 +395,10 @@ const VistaBarra = () => {
                     <div className="vb-page-content">
                         <section className="vb-banner">
                             <div className="vb-banner-text">
-                                <h1>Pide sin colas</h1>
-                                <p>Haz tu pedido desde el móvil, paga y recoge en barra cuando esté listo.</p>
+                                <h1>{t('Pide_sin_colas')}</h1>
+                                <p>{t('Pide_sin_colas_desc')}</p>
                                 <button className="vb-btn-voz" onClick={iniciarEscuchaVoz}>
-                                    <span className="material-symbols-outlined">mic</span> Pedir por Voz
+                                    <span className="material-symbols-outlined">mic</span> {t('Pedir_voz')}
                                 </button>
                             </div>
                             <div className="vb-banner-img"></div>
@@ -406,7 +411,7 @@ const VistaBarra = () => {
                                     onClick={() => setFiltroActivo(cat)}
                                     className={`vb-cat-btn ${filtroActivo === cat ? 'active' : ''}`}
                                 >
-                                    {cat}
+                                    {t(cat)}
                                 </button>
                             ))}
                         </div>
@@ -418,8 +423,8 @@ const VistaBarra = () => {
                                     <div key={prod.id} className="vb-card" onClick={() => abrirModalProducto(prod, cat)}>
                                         <img src={prod.img} className="vb-card-img" alt={prod.nombre} />
                                         <div className="vb-card-info">
-                                            <h4>{prod.nombre}</h4>
-                                            <p className="vb-card-desc">{prod.desc}</p>
+                                            <h4>{t(prod.nombre)}</h4>
+                                            <p className="vb-card-desc">{t(prod.desc)}</p>
                                             <div className="vb-card-footer">
                                                 <span className="vb-price">{prod.precio.toFixed(2)}€</span>
                                                 <div className="vb-card-actions">
@@ -435,11 +440,11 @@ const VistaBarra = () => {
                     </div>
                 ) : (
                     <div className="vb-page-content">
-                        <h2 className="vb-section-title">Tu Pedido</h2>
+                        <h2 className="vb-section-title">{t('Tu_Pedido')}</h2>
                         {carrito.length === 0 ? (
                             <div className="vb-empty-cart">
-                                <p>Tu carrito está vacío.</p>
-                                <button onClick={() => setSeccionActiva('menu')} className="vb-btn-text">Volver a la carta</button>
+                                <p>{t('Tu_carrito_vacio')}</p>
+                                <button onClick={() => setSeccionActiva('menu')} className="vb-btn-text">{t('Volver_a_carta')}</button>
                             </div>
                         ) : (
                             <div>
@@ -450,7 +455,7 @@ const VistaBarra = () => {
                                                 <div className="vb-pedido-header">
                                                     <div>
                                                         <span className="vb-pedido-name">
-                                                            {item.nombre} {item.enviado && <small>✅ PAGADO</small>}
+                                                            {t(item.nombre)} {item.enviado && <small>{t('PAGADO_badge')}</small>}
                                                         </span>
                                                         <span className="vb-pedido-price">{item.precioFinal.toFixed(2)}€</span>
                                                     </div>
@@ -465,7 +470,7 @@ const VistaBarra = () => {
                                                     <div className="vb-pedido-opciones">
                                                         {item.extrasAplicados.map((opt, idx) => (
                                                             <span key={idx} className="vb-pedido-badge-opt">
-                                                                {opt.opcionSeleccionada.nombre} {opt.opcionSeleccionada.suplemento > 0 && `(+${opt.opcionSeleccionada.suplemento.toFixed(2)}€)`}
+                                                                {t(opt.opcionSeleccionada.nombre)} {opt.opcionSeleccionada.suplemento > 0 && `(+${opt.opcionSeleccionada.suplemento.toFixed(2)}€)`}
                                                             </span>
                                                         ))}
                                                     </div>
@@ -483,26 +488,26 @@ const VistaBarra = () => {
 
                                 <div className="vb-total-card">
                                     <div className="vb-total-header">
-                                        <span>Total</span>
+                                        <span>{t('Total')}</span>
                                         <span className="vb-total-amount">{totalPrecioCarrito.toFixed(2)}€</span>
                                     </div>
                                     {!pagoSolicitado && !esperandoCobro && (
-                                        <button onClick={() => setSeccionActiva('menu')} className="vb-btn-carrito btn-orange" style={{ marginTop: '20px' }}>AÑADIR MÁS COSAS</button>
+                                        <button onClick={() => setSeccionActiva('menu')} className="vb-btn-carrito btn-orange" style={{ marginTop: '20px' }}>{t("Anadir_mas_cosas")}</button>
                                     )}
                                 </div>
 
                                 {esperandoCobro ? (
                                     <div className="vb-espera-card">
                                         <span className="material-symbols-outlined icon-large">hourglass_empty</span>
-                                        <h3>Enseguida te cobramos</h3>
-                                        <p>Por favor, acércate a la caja para abonar <strong>{totalPrecioCarrito.toFixed(2)}€</strong> en {metodoPagoMesa === 'cash' ? 'efectivo' : 'tarjeta'}.</p>
+                                        <h3>{t('Enseguida_te_cobramos')}</h3>
+                                        <p><Trans i18nKey="Enseguida_te_cobramos_desc" values={{ total: totalPrecioCarrito.toFixed(2), metodo: metodoPagoMesa === 'cash' ? t('efectivo') : t('tarjeta') }}>Por favor, acércate a la caja para abonar <strong>{totalPrecioCarrito.toFixed(2)}€</strong> en {metodoPagoMesa === 'cash' ? t('efectivo') : t('tarjeta')}.</Trans></p>
                                     </div>
                                 ) : !pagoSolicitado ? (
                                     <div className="vb-pago-grid">
                                         <div className="vb-pago-card">
                                             <div className="vb-pago-header">
                                                 <span className="material-symbols-outlined icon-orange">payments</span>
-                                                <h3>Pagar ahora (Digital)</h3>
+                                                <h3>{t('Pagar_ahora_digital')}</h3>
                                             </div>
                                             <button className="vb-btn-digital" onClick={() => gestionarPago('bizum')}>
                                                 <div className="vb-digital-info">
@@ -523,32 +528,32 @@ const VistaBarra = () => {
                                         <div className="vb-pago-card">
                                             <div className="vb-pago-header">
                                                 <span className="material-symbols-outlined icon-orange">storefront</span>
-                                                <h3>Pagar en barra</h3>
+                                                <h3>{t('Pagar_en_barra')}</h3>
                                             </div>
                                             <div className="vb-radio-group">
                                                 <div className={`vb-radio-box ${metodoPagoMesa === 'cash' ? 'active' : ''}`} onClick={() => setMetodoPagoMesa('cash')}>
                                                     <span className="material-symbols-outlined">payments</span>
-                                                    <span>Efectivo</span>
+                                                    <span>{t('Efectivo_titulo')}</span>
                                                 </div>
                                                 <div className={`vb-radio-box ${metodoPagoMesa === 'card' ? 'active' : ''}`} onClick={() => setMetodoPagoMesa('card')}>
                                                     <span className="material-symbols-outlined">credit_card</span>
-                                                    <span>Tarjeta</span>
+                                                    <span>{t('Tarjeta_titulo')}</span>
                                                 </div>
                                             </div>
                                             <button className="vb-btn-carrito btn-dark" onClick={() => gestionarPago('barra')}>
                                                 <span className="material-symbols-outlined">notifications_active</span>
-                                                AVISAR PARA PAGAR
+                                                {t('avisar_para_pagar')}
                                             </button>
                                         </div>
                                     </div>
                                 ) : (
                                     <div className="vb-pago-card vb-success-card">
                                         <span className="material-symbols-outlined icon-success">check_circle</span>
-                                        <h3>¡Pago confirmado!</h3>
-                                        <p>Tu pedido ya se está preparando en cocina.</p>
+                                        <h3>{t('Pago_confirmado')}</h3>
+                                        <p>{t('Pago_confirmado_desc')}</p>
 
                                         <div className="vb-ticket-box">
-                                            <p>Tu número de recogida</p>
+                                            <p>{t('Tu_numero_recogida')}</p>
                                             <h2>#{numeroPedido}</h2>
                                         </div>
                                         <button className="vb-btn-carrito btn-dark" onClick={() => {
@@ -557,7 +562,7 @@ const VistaBarra = () => {
                                             setNumeroPedido(null);
                                             setSeccionActiva('menu');
                                         }} style={{ marginTop: '20px', width: '100%', maxWidth: '300px' }}>
-                                            NUEVO PEDIDO
+                                            {t('Nuevo_pedido')}
                                         </button>
                                     </div>
                                 )}
@@ -570,7 +575,7 @@ const VistaBarra = () => {
                     <div className="vb-footer-actions">
                         <button className="vb-btn-carrito" onClick={() => setSeccionActiva('pedido')}>
                             <span className="material-symbols-outlined">shopping_basket</span>
-                            VER MI PEDIDO ({totalPrecioCarrito.toFixed(2)}€)
+                            {t('VER_MI_PEDIDO', {total: totalPrecioCarrito.toFixed(2)})}
                         </button>
                     </div>
                 )}
@@ -588,9 +593,9 @@ const VistaBarra = () => {
                         <div className="vb-sheet-header">
                             <img src={productoModal.prod.img} alt="" />
                             <div className="vb-sheet-title">
-                                <h3>{productoModal.prod.nombre}</h3>
-                                <p>{productoModal.prod.desc}</p>
-                                <span className="vb-sheet-price">{productoModal.prod.precio.toFixed(2)}€ base</span>
+                                <h3>{t(productoModal.prod.nombre)}</h3>
+                                <p>{t(productoModal.prod.desc)}</p>
+                                <span className="vb-sheet-price">{productoModal.prod.precio.toFixed(2)}€ {t('base')}</span>
                             </div>
                         </div>
 
@@ -602,15 +607,15 @@ const VistaBarra = () => {
                                 return (
                                     <div key={grupo.id} className="vb-option-group">
                                         <h4 className="vb-group-title">
-                                            {grupo.nombre}
+                                            {t(grupo.nombre)}
                                             {grupo.min_selecciones > 0 ? (
                                                 <span className={`vb-req-badge ${esValido ? 'valido' : 'pendiente'}`}>
                                                     {numSeleccionadas < grupo.min_selecciones
-                                                        ? `Selecciona al menos ${grupo.min_selecciones}`
-                                                        : `Mínimo cumplido (${numSeleccionadas})`}
+                                                        ? t('Selecciona_al_menos', {min: grupo.min_selecciones})
+                                                        : t('Minimo_cumplido', {count: numSeleccionadas})}
                                                 </span>
                                             ) : (
-                                                <span className="vb-opt-badge">Opcional (máx {grupo.max_selecciones})</span>
+                                                <span className="vb-opt-badge">{t('Opcional_max', {max: grupo.max_selecciones})}</span>
                                             )}
                                         </h4>
                                         <div className="vb-options-list">
@@ -629,7 +634,7 @@ const VistaBarra = () => {
                                                                     : <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>check</span>
                                                             )}
                                                         </div>
-                                                        <span className="vb-option-name">{opcion.nombre}</span>
+                                                        <span className="vb-option-name">{t(opcion.nombre)}</span>
                                                         {opcion.suplemento > 0 && (
                                                             <span className="vb-option-sup">+{opcion.suplemento.toFixed(2)}€</span>
                                                         )}
@@ -642,10 +647,10 @@ const VistaBarra = () => {
                             })}
 
                             <div className="vb-option-group">
-                                <h4 className="vb-group-title">Notas adicionales</h4>
+                                <h4 className="vb-group-title">{t('Notas_adicionales')}</h4>
                                 <textarea
                                     className="vb-textarea-notes"
-                                    placeholder="Ej: Muy caliente, sin azúcar..."
+                                    placeholder={t('Ejemplo_notas')}
                                     value={notaOpcional}
                                     onChange={(e) => setNotaOpcional(e.target.value)}
                                 ></textarea>
@@ -659,8 +664,8 @@ const VistaBarra = () => {
                                 disabled={!validarSelecciones()}
                             >
                                 {validarSelecciones()
-                                    ? `Añadir al carrito • ${calcularPrecioFinalItem().toFixed(2)}€`
-                                    : 'Completa las opciones requeridas'}
+                                    ? t('Anadir_carrito_btn', {precio: calcularPrecioFinalItem().toFixed(2)})
+                                    : t('Completa_opciones')}
                             </button>
                         </div>
                     </div>
@@ -678,28 +683,28 @@ const VistaBarra = () => {
                                     <div className="pulse-ring delay"></div>
                                     <span className="material-symbols-outlined mic-icon">mic</span>
                                 </div>
-                                <p className="vb-voz-hint">Toca el micrófono cuando termines de hablar</p>
-                                <button className="vb-btn-voz-close" onClick={cancelarVoz}>Cancelar</button>
+                                <p className="vb-voz-hint">{t('Hint_voz')}</p>
+                                <button className="vb-btn-voz-close" onClick={cancelarVoz}>{t('Cancelar')}</button>
                             </>
                         )}
                         {estadoVoz === 'procesando' && (
                             <>
                                 <span className="material-symbols-outlined vb-icon-spin">autorenew</span>
                                 <h2>{mensajeVoz}</h2>
-                                <p className="vb-voz-hint">Analizando pedido con IA...</p>
+                                <p className="vb-voz-hint">{t('Hint_procesando')}</p>
                             </>
                         )}
                         {estadoVoz === 'exito' && (
                             <>
                                 <span className="material-symbols-outlined vb-icon-success">check_circle</span>
-                                <h2>Pedido realizado</h2>
+                                <h2>{t('Pedido_realizado', 'Pedido realizado')}</h2>
                                 <p className="vb-voz-hint">{mensajeVoz}</p>
                             </>
                         )}
                         {estadoVoz === 'error' && (
                             <>
                                 <span className="material-symbols-outlined vb-icon-error">error</span>
-                                <h2>Mmm... no lo tengo claro</h2>
+                                <h2>{t('Mmm_no_lo_tengo_claro', 'Mmm... no lo tengo claro')}</h2>
                                 <p className="vb-voz-hint">{mensajeVoz}</p>
                                 <div className="vb-voz-error-actions">
                                     <button className="vb-btn-carrito" onClick={iniciarEscuchaVoz}>

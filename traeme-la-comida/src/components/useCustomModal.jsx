@@ -1,8 +1,10 @@
 import React, { useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import './CustomModal.css';
 
 export const useCustomModal = () => {
     const [modalConfig, setModalConfig] = useState(null);
+    const { t } = useTranslation();
 
     const showAlert = useCallback((text, type = 'info', title = null) => {
         setModalConfig({
@@ -68,11 +70,11 @@ export const useCustomModal = () => {
                     <div className="custom-modal-actions">
                         {type === 'confirm' ? (
                             <>
-                                <button className="custom-modal-btn cancel" onClick={handleCancel}>{cancelText || 'Cancelar'}</button>
-                                <button className="custom-modal-btn confirm" onClick={handleConfirm}>{confirmText || 'Aceptar'}</button>
+                                <button className="custom-modal-btn cancel" onClick={handleCancel}>{(!cancelText || cancelText === 'Cancelar') ? t('Cancelar', 'Cancelar') : cancelText}</button>
+                                <button className="custom-modal-btn confirm" onClick={handleConfirm}>{(!confirmText || confirmText === 'Aceptar') ? t('Aceptar', 'Aceptar') : confirmText}</button>
                             </>
                         ) : (
-                            <button className="custom-modal-btn confirm" onClick={handleConfirm}>{confirmText || 'Aceptar'}</button>
+                            <button className="custom-modal-btn confirm" onClick={handleConfirm}>{(!confirmText || confirmText === 'Aceptar') ? t('Aceptar', 'Aceptar') : confirmText}</button>
                         )}
                     </div>
                 </div>

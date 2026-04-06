@@ -15,8 +15,11 @@ import {
 } from '../services/apiCliente';
 import { getConfiguracionLocal } from '../services/apiAuth';
 import { useCustomModal } from '../components/useCustomModal';
+import { useTranslation, Trans } from 'react-i18next';
+import LanguageSelector from '../components/LanguageSelector';
 
 const VistaCliente = () => {
+    const { t } = useTranslation();
     const { showAlert, showConfirm, ModalComponent } = useCustomModal();
     const { uuid } = useParams();
     const [mesa, setMesa] = useState(null);
@@ -168,7 +171,7 @@ const VistaCliente = () => {
                         [grupoId]: [...seleccionesActuales, opcion]
                     });
                 } else {
-                    showAlert(`Solo puedes seleccionar un máximo de ${max} opciones.`, 'warning');
+                    showAlert(t('max_opciones_alert', {max}), 'warning');
                 }
             }
         }
@@ -194,7 +197,7 @@ const VistaCliente = () => {
 
     const confirmarAgregarAlCarrito = () => {
         if (!validarSelecciones()) {
-            showAlert("Por favor, selecciona las opciones requeridas.", "warning");
+            showAlert(t('Modal_opciones_req'), "warning");
             return;
         }
         const precioFinal = calcularPrecioFinalItem();
@@ -223,7 +226,7 @@ const VistaCliente = () => {
         if (itemsPorEnviar.length === 0) return;
 
         if (!mesa) {
-            showAlert('No se puede enviar el pedido: la mesa no ha sido identificada.', 'error');
+            showAlert(t('Error_mesa_no_identificada'), 'error');
             return;
         }
 
@@ -232,15 +235,15 @@ const VistaCliente = () => {
 
             const carritoEnviado = carrito.map(item => ({ ...item, enviado: true }));
             setCarrito(carritoEnviado);
-            showAlert('¡Pedido enviado a cocina!', 'success');
+            showAlert(t('Pedido_enviado_cocina'), 'success');
         } catch (error) {
             console.error('Error al enviar pedido:', error);
-            showAlert('Hubo un error enviando tu pedido a cocina.', 'error');
+            showAlert(t('Error_enviar_pedido'), 'error');
         }
     };
 
     const llamarAlCamarero = async () => {
-        if (!camareroLlamado && await showConfirm("¿Deseas llamar al camarero?")) {
+        if (!camareroLlamado && await showConfirm(t('Confirm_llamar_camarero'))) {
             try {
                 if (mesa) await llamarCamareroApi(mesa.id);
                 setCamareroLlamado(true);
@@ -268,7 +271,7 @@ const VistaCliente = () => {
                 .map(({ index }) => index));
 
         if (indicesPagables.length === 0) {
-            showAlert("No hay artículos seleccionados o artículos pendientes de pago.", "warning");
+            showAlert(t('No_hay_articulos', 'No hay artículos seleccionados o artículos pendientes de pago.'), "warning");
             return;
         }
 
@@ -349,7 +352,7 @@ const VistaCliente = () => {
                         await finalizarPedido(pedido.id, mesa.id);
                         if (configNegocio.link_resenas_google) {
                             setTimeout(async () => {
-                                if (await showConfirm("Para nosotros es muy importante tu opinión, ¿Nos ayudas con una reseña en Google?", "¡Gracias por tu visita!", "Claro que sí", "En otro momento")) {
+                                if (await showConfirm(t("Review_google_title"), t("Review_google_desc"), t("Review_google_yes"), t("Review_google_no"))) {
                                     window.open(configNegocio.link_resenas_google, '_blank');
                                 }
                             }, 500);
@@ -417,19 +420,19 @@ const VistaCliente = () => {
 
     const iniciarEscuchaVoz = () => {
         setEstadoVoz('escuchando');
-        setMensajeVoz("Dime qué quieres pedir...");
+        setMensajeVoz(t('Escuchando_voz'));
     };
 
     const detenerEscuchaVoz = () => {
         setEstadoVoz('procesando');
-        setMensajeVoz("Procesando tu audio...");
+        setMensajeVoz(t('Procesando_voz'));
 
         setTimeout(() => {
             const exito = Math.random() > 0.3;
 
             if (exito) {
                 setEstadoVoz('exito');
-                setMensajeVoz("¡Entendido! Añadiendo Capuchino al pedido...");
+                setMensajeVoz(t('Exito_voz'));
 
                 const prodSimulado = menuData.length > 0 ? menuData[0].productos[0] : null;
 
@@ -451,7 +454,7 @@ const VistaCliente = () => {
 
             } else {
                 setEstadoVoz('error');
-                setMensajeVoz("No te he entendido bien. Había mucho ruido o el producto no está en carta.");
+                setMensajeVoz(t('Error_voz'));
             }
         }, 1500);
     };
@@ -469,7 +472,7 @@ const VistaCliente = () => {
             <div className="vista-cliente-wrapper" style={{ alignItems: 'center', justifyContent: 'center' }}>
                 <div style={{ textAlign: 'center', padding: '40px 20px' }}>
                     <span className="material-symbols-outlined" style={{ fontSize: '64px', color: '#ef4444' }}>qr_code_scanner</span>
-                    <h2 style={{ color: '#1e293b', marginTop: '16px' }}>QR no válido</h2>
+                    <h2 style={{ color: '#1e293b', marginTop: '16px' }}>{t('QR_no_valido')}</h2>
                     <p style={{ color: '#64748b', maxWidth: '280px', margin: '8px auto 0' }}>
                         Este código QR ha caducado o no existe. Por favor, escanea el QR que hay sobre tu mesa.
                     </p>
@@ -483,7 +486,7 @@ const VistaCliente = () => {
             <div className="vista-cliente-wrapper" style={{ alignItems: 'center' }}>
                 <div style={{ textAlign: 'center', color: 'var(--primary)' }}>
                     <span className="material-symbols-outlined vc-icon-spin" style={{ fontSize: '40px' }}>autorenew</span>
-                    <p style={{ fontWeight: 'bold' }}>Cargando carta...</p>
+                    <p style={{ fontWeight: 'bold' }}>{t('Cargando_carta')}</p>
                 </div>
             </div>
         )
@@ -504,20 +507,19 @@ const VistaCliente = () => {
                         )}
                     </div>
                     <h2>{configNegocio.nombre_local}</h2>
+                    <LanguageSelector />
                 </header>
 
                 <nav className="vc-nav">
                     <span
                         className={`vc-nav-link ${seccionActiva === 'menu' ? 'active' : ''}`}
                         onClick={() => setSeccionActiva('menu')}
-                    >
-                        MENÚ
-                    </span>
+                    > {t('MENU')} </span>
                     <span
                         className={`vc-nav-link ${seccionActiva === 'pedido' ? 'active' : ''}`}
                         onClick={() => setSeccionActiva('pedido')}
                     >
-                        MI PEDIDO {carrito.filter(i => !i.estadoPago).length > 0 && <div className="vc-badge-nav">{carrito.filter(i => !i.estadoPago).length}</div>}
+                        {t('MI PEDIDO')} {carrito.filter(i => !i.estadoPago).length > 0 && <div className="vc-badge-nav">{carrito.filter(i => !i.estadoPago).length}</div>}
                     </span>
                 </nav>
 
@@ -525,10 +527,10 @@ const VistaCliente = () => {
                     <div className="vc-page-content">
                         <section className="vc-banner">
                             <div className="vc-banner-text">
-                                <h1>Empieza bien tu mañana</h1>
-                                <p>Pide un desayuno fresco directamente desde tu mesa.</p>
+                                <h1>{t('Empieza_manana')}</h1>
+                                <p>{t('Empieza_manana_desc')}</p>
                                 <button className="vc-btn-voz" onClick={iniciarEscuchaVoz}>
-                                    <span className="material-symbols-outlined">mic</span> Pedir por Voz
+                                    <span className="material-symbols-outlined">mic</span> {t('Pedir_voz')}
                                 </button>
                             </div>
                             <div className="vc-banner-img"></div>
@@ -541,7 +543,7 @@ const VistaCliente = () => {
                                     onClick={() => setFiltroActivo(cat)}
                                     className={`vc-cat-btn ${filtroActivo === cat ? 'active' : ''}`}
                                 >
-                                    {cat}
+                                    {t(cat)}
                                 </button>
                             ))}
                         </div>
@@ -553,8 +555,8 @@ const VistaCliente = () => {
                                     <div key={prod.id} className="vc-card" onClick={() => abrirModalProducto(prod, cat)}>
                                         <img src={prod.img} className="vc-card-img" alt={prod.nombre} />
                                         <div className="vc-card-info">
-                                            <h4>{prod.nombre}</h4>
-                                            <p className="vc-card-desc">{prod.desc}</p>
+                                            <h4>{t(prod.nombre)}</h4>
+                                            <p className="vc-card-desc">{t(prod.desc)}</p>
                                             <div className="vc-card-footer">
                                                 <span className="vc-price">{prod.precio.toFixed(2)}€</span>
                                                 <div className="vc-card-actions">
@@ -570,11 +572,11 @@ const VistaCliente = () => {
                     </div>
                 ) : (
                     <div className="vc-page-content">
-                        <h2 className="vc-section-title">Tu Pedido</h2>
+                        <h2 className="vc-section-title">{t('Tu_Pedido')}</h2>
                         {carrito.length === 0 ? (
                             <div className="vc-empty-cart">
-                                <p>Tu carrito está vacío.</p>
-                                <button onClick={() => setSeccionActiva('menu')} className="vc-btn-text">Volver a la carta</button>
+                                <p>{t('Tu_carrito_vacio')}</p>
+                                <button onClick={() => setSeccionActiva('menu')} className="vc-btn-text">{t('Volver_a_carta')}</button>
                             </div>
                         ) : (
                             <div>
@@ -600,13 +602,13 @@ const VistaCliente = () => {
                                                         )}
                                                         <div style={{ flex: 1 }}>
                                                             <span className="vc-pedido-name">
-                                                                {item.nombre}
+                                                                {t(item.nombre)}
                                                                 {item.estadoPago === 'pagado' ? (
-                                                                    <small style={{ color: '#34a853', marginLeft: '5px' }}>✅ PAGADO</small>
+                                                                    <small style={{ color: '#34a853', marginLeft: '5px' }}>{t('PAGADO_badge')}</small>
                                                                 ) : item.estadoPago === 'solicitado_mesa' ? (
-                                                                    <small style={{ color: '#3b82f6', marginLeft: '5px' }}>⏳ ESPERANDO COBRO</small>
+                                                                    <small style={{ color: '#3b82f6', marginLeft: '5px' }}>{t('ESPERANDO_COBRO_badge')}</small>
                                                                 ) : (
-                                                                    item.enviado && <small style={{ color: 'var(--primary)', marginLeft: '5px' }}>👨‍🍳 EN COCINA</small>
+                                                                    item.enviado && <small style={{ color: 'var(--primary)', marginLeft: '5px' }}>{t('EN_COCINA_badge')}</small>
                                                                 )}
                                                             </span>
                                                             <span className="vc-pedido-price">{item.precioFinal.toFixed(2)}€</span>
@@ -623,7 +625,7 @@ const VistaCliente = () => {
                                                     <div className="vc-pedido-opciones">
                                                         {item.extrasAplicados.map((opt, idx) => (
                                                             <span key={idx} className="vc-pedido-badge-opt">
-                                                                {opt.opcionSeleccionada.nombre} {opt.opcionSeleccionada.suplemento > 0 && `(+${opt.opcionSeleccionada.suplemento.toFixed(2)}€)`}
+                                                                {t(opt.opcionSeleccionada.nombre)} {opt.opcionSeleccionada.suplemento > 0 && `(+${opt.opcionSeleccionada.suplemento.toFixed(2)}€)`}
                                                             </span>
                                                         ))}
                                                     </div>
@@ -641,12 +643,12 @@ const VistaCliente = () => {
 
                                 <div className="vc-total-card">
                                     <div className="vc-total-header">
-                                        <span>Total Cuenta</span>
+                                        <span>{t('Total_Cuenta')}</span>
                                         <span className="vc-total-amount">{totalPrecioCarrito.toFixed(2)}€</span>
                                     </div>
                                     {totalPendientePago > 0 && totalPendientePago !== totalPrecioCarrito && (
                                         <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontWeight: 'bold', marginTop: '10px' }}>
-                                            <span>Pendiente de pago</span>
+                                            <span>{t('Pendiente_pago')}</span>
                                             <span style={{ color: 'var(--primary)' }}>{totalPendientePago.toFixed(2)}€</span>
                                         </div>
                                     )}
@@ -663,24 +665,24 @@ const VistaCliente = () => {
                                                     disabled={itemsSeleccionadosPago.length === 0}
                                                     style={{ backgroundColor: '#1e293b' }}
                                                 >
-                                                    PAGAR SELECCIÓN ({itemsSeleccionadosPago.reduce((acc, idx) => acc + carrito[idx].precioFinal, 0).toFixed(2)}€)
+                                                    {t('pagar_seleccion')} ({itemsSeleccionadosPago.reduce((acc, idx) => acc + carrito[idx].precioFinal, 0).toFixed(2)}€)
                                                 </button>
                                                 <button onClick={() => { setModoSeleccionPago(false); setItemsSeleccionadosPago([]); }} className="vc-btn-text">
-                                                    Cancelar selección
+                                                    {t('Cancelar_seleccion')}
                                                 </button>
                                             </>
                                         ) : (
                                             <>
                                                 {carrito.some(item => !item.enviado) && (
                                                     <button onClick={enviarACocina} className="vc-btn-carrito btn-dark">
-                                                        ENVIAR PEDIDO A COCINA
+                                                        {t('Enviar_cocina')}
                                                     </button>
                                                 )}
 
                                                 {!todosPagados && (
                                                     <button onClick={() => setSeccionActiva('menu')} className="vc-btn-carrito btn-orange">
                                                         <span className="material-symbols-outlined" style={{ marginRight: '5px' }}>add_circle</span>
-                                                        AÑADIR MÁS COSAS
+                                                        {t('Anadir_mas_cosas')}
                                                     </button>
                                                 )}
                                             </>
@@ -691,9 +693,9 @@ const VistaCliente = () => {
                                 {totalEsperandoMesa > 0 && (
                                     <div className="vc-pago-card" style={{ borderColor: '#bfdbfe', backgroundColor: '#eff6ff', marginTop: '30px', textAlign: 'center' }}>
                                         <span className="material-symbols-outlined" style={{ color: '#3b82f6', fontSize: '48px', marginBottom: '10px' }}>hourglass_top</span>
-                                        <h3 style={{ color: '#1e293b', marginBottom: '5px' }}>Camarero en camino</h3>
+                                        <h3 style={{ color: '#1e293b', marginBottom: '5px' }}>{t('Camarero_camino')}</h3>
                                         <p style={{ color: '#64748b', margin: '0', fontSize: '14px' }}>
-                                            Prepara <strong>{totalEsperandoMesa.toFixed(2)}€</strong> para abonar en la mesa.
+                                            <Trans i18nKey="Camarero_camino_desc" values={{ total: totalEsperandoMesa.toFixed(2) }}>Prepara <strong>{totalEsperandoMesa.toFixed(2)}€</strong> para abonar en la mesa.</Trans>
                                         </p>
                                     </div>
                                 )}
@@ -703,7 +705,7 @@ const VistaCliente = () => {
                                         <div className="vc-pago-card">
                                             <div className="vc-pago-header">
                                                 <span className="material-symbols-outlined icon-orange">payments</span>
-                                                <h3>Pagar ahora (Digital)</h3>
+                                                <h3>{t('Pagar_ahora_digital')}</h3>
                                             </div>
                                             <button className="vc-btn-digital" onClick={() => iniciarPago('bizum')}>
                                                 <div className="vc-digital-info">
@@ -724,21 +726,21 @@ const VistaCliente = () => {
                                         <div className="vc-pago-card">
                                             <div className="vc-pago-header">
                                                 <span className="material-symbols-outlined icon-orange">restaurant_menu</span>
-                                                <h3>Pagar en mesa</h3>
+                                                <h3>{t('Pagar_en_mesa')}</h3>
                                             </div>
                                             <div className="vc-radio-group">
                                                 <div className={`vc-radio-box ${metodoPagoMesa === 'cash' ? 'active' : ''}`} onClick={() => setMetodoPagoMesa('cash')}>
                                                     <span className="material-symbols-outlined">payments</span>
-                                                    <span>Efectivo</span>
+                                                    <span>{t('Efectivo_titulo')}</span>
                                                 </div>
                                                 <div className={`vc-radio-box ${metodoPagoMesa === 'card' ? 'active' : ''}`} onClick={() => setMetodoPagoMesa('card')}>
                                                     <span className="material-symbols-outlined">credit_card</span>
-                                                    <span>Tarjeta</span>
+                                                    <span>{t('Tarjeta_titulo')}</span>
                                                 </div>
                                             </div>
                                             <button className="vc-btn-carrito btn-dark" onClick={() => iniciarPago('mesa')}>
                                                 <span className="material-symbols-outlined">notifications_active</span>
-                                                SOLICITAR COBRO
+                                                {t('solicitar_cobro')}
                                             </button>
                                         </div>
                                     </div>
@@ -746,8 +748,8 @@ const VistaCliente = () => {
                                     todosPagados && (
                                         <div className="vc-pago-card vc-success-card">
                                             <span className="material-symbols-outlined icon-success">check_circle</span>
-                                            <h3>¡Cuenta saldada!</h3>
-                                            <p>Todos los artículos han sido pagados. ¡Gracias por vuestra visita!</p>
+                                            <h3>{t('Cuenta_saldada')}</h3>
+                                            <p>{t('Cuenta_saldada_desc')}</p>
                                         </div>
                                     )
                                 )}
@@ -763,12 +765,12 @@ const VistaCliente = () => {
                             onClick={llamarAlCamarero}
                         >
                             <span className="material-symbols-outlined">{camareroLlamado ? 'done' : 'notifications'}</span>
-                            {camareroLlamado ? 'EL CAMARERO HA SIDO LLAMADO' : 'LLAMAR AL CAMARERO'}
+                            {camareroLlamado ? t('Camarero_llamado') : t('Llamar_camarero')}
                         </button>
                         {carrito.length > 0 && (
                             <button className="vc-btn-carrito" onClick={() => setSeccionActiva('pedido')}>
                                 <span className="material-symbols-outlined">shopping_basket</span>
-                                VER MI PEDIDO ({totalPrecioCarrito.toFixed(2)}€)
+                                {t('VER_MI_PEDIDO', {total: totalPrecioCarrito.toFixed(2)})}
                             </button>
                         )}
                     </div>
@@ -787,9 +789,9 @@ const VistaCliente = () => {
                         <div className="vc-sheet-header">
                             <img src={productoModal.prod.img} alt="" />
                             <div className="vc-sheet-title">
-                                <h3>{productoModal.prod.nombre}</h3>
-                                <p>{productoModal.prod.desc}</p>
-                                <span className="vc-sheet-price">{productoModal.prod.precio.toFixed(2)}€ base</span>
+                                <h3>{t(productoModal.prod.nombre)}</h3>
+                                <p>{t(productoModal.prod.desc)}</p>
+                                <span className="vc-sheet-price">{productoModal.prod.precio.toFixed(2)}€ {t('base')}</span>
                             </div>
                         </div>
 
@@ -801,15 +803,15 @@ const VistaCliente = () => {
                                 return (
                                     <div key={grupo.id} className="vc-option-group">
                                         <h4 className="vc-group-title">
-                                            {grupo.nombre}
+                                            {t(grupo.nombre)}
                                             {grupo.min_selecciones > 0 ? (
                                                 <span className={`vc-req-badge ${esValido ? 'valido' : 'pendiente'}`}>
                                                     {numSeleccionadas < grupo.min_selecciones
-                                                        ? `Selecciona al menos ${grupo.min_selecciones}`
-                                                        : `Mínimo cumplido (${numSeleccionadas})`}
+                                                        ? t('Selecciona_al_menos', {min: grupo.min_selecciones})
+                                                        : t('Minimo_cumplido', {count: numSeleccionadas})}
                                                 </span>
                                             ) : (
-                                                <span className="vc-opt-badge">Opcional (máx {grupo.max_selecciones})</span>
+                                                <span className="vc-opt-badge">{t('Opcional_max', {max: grupo.max_selecciones})}</span>
                                             )}
                                         </h4>
                                         <div className="vc-options-list">
@@ -828,7 +830,7 @@ const VistaCliente = () => {
                                                                     : <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>check</span>
                                                             )}
                                                         </div>
-                                                        <span className="vc-option-name">{opcion.nombre}</span>
+                                                        <span className="vc-option-name">{t(opcion.nombre)}</span>
                                                         {opcion.suplemento > 0 && (
                                                             <span className="vc-option-sup">+{opcion.suplemento.toFixed(2)}€</span>
                                                         )}
@@ -841,10 +843,10 @@ const VistaCliente = () => {
                             })}
 
                             <div className="vc-option-group">
-                                <h4 className="vc-group-title">Notas adicionales</h4>
+                                <h4 className="vc-group-title">{t('Notas_adicionales')}</h4>
                                 <textarea
                                     className="vc-textarea-notes"
-                                    placeholder="Ej: Muy caliente, sin azúcar..."
+                                    placeholder={t('Ejemplo_notas')}
                                     value={notaOpcional}
                                     onChange={(e) => setNotaOpcional(e.target.value)}
                                 ></textarea>
@@ -858,8 +860,8 @@ const VistaCliente = () => {
                                 disabled={!validarSelecciones()}
                             >
                                 {validarSelecciones()
-                                    ? `Añadir al carrito • ${calcularPrecioFinalItem().toFixed(2)}€`
-                                    : 'Completa las opciones requeridas'}
+                                    ? t('Anadir_carrito_btn', {precio: calcularPrecioFinalItem().toFixed(2)})
+                                    : t('Completa_opciones')}
                             </button>
                         </div>
                     </div>
@@ -878,28 +880,28 @@ const VistaCliente = () => {
                                     <div className="pulse-ring delay"></div>
                                     <span className="material-symbols-outlined mic-icon">mic</span>
                                 </div>
-                                <p className="vc-voz-hint">Toca el micrófono cuando termines de hablar</p>
-                                <button className="vc-btn-voz-close" onClick={cancelarVoz}>Cancelar</button>
+                                <p className="vc-voz-hint">{t('Hint_voz')}</p>
+                                <button className="vc-btn-voz-close" onClick={cancelarVoz}>{t('Cancelar')}</button>
                             </>
                         )}
                         {estadoVoz === 'procesando' && (
                             <>
                                 <span className="material-symbols-outlined vc-icon-spin">autorenew</span>
                                 <h2>{mensajeVoz}</h2>
-                                <p className="vc-voz-hint">Analizando pedido con IA...</p>
+                                <p className="vc-voz-hint">{t('Hint_procesando')}</p>
                             </>
                         )}
                         {estadoVoz === 'exito' && (
                             <>
                                 <span className="material-symbols-outlined vc-icon-success">check_circle</span>
-                                <h2>Pedido realizado</h2>
+                                <h2>{t('Pedido_realizado', 'Pedido realizado')}</h2>
                                 <p className="vc-voz-hint">{mensajeVoz}</p>
                             </>
                         )}
                         {estadoVoz === 'error' && (
                             <>
                                 <span className="material-symbols-outlined vc-icon-error">error</span>
-                                <h2>Mmm... no lo tengo claro</h2>
+                                <h2>{t('Mmm_no_lo_tengo_claro', 'Mmm... no lo tengo claro')}</h2>
                                 <p className="vc-voz-hint">{mensajeVoz}</p>
                                 <div className="vc-voz-error-actions">
                                     <button className="vc-btn-carrito" onClick={iniciarEscuchaVoz}>
@@ -928,9 +930,9 @@ const VistaCliente = () => {
                             }}>
                                 <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>payments</span>
                             </div>
-                            <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b', marginBottom: '10px' }}>¿Cómo quieres pagar?</h3>
+                            <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b', marginBottom: '10px' }}>{t('Como_quieres_pagar', '¿Cómo quieres pagar?')}</h3>
                             <p style={{ color: '#64748b', fontSize: '15px', lineHeight: '1.5', marginBottom: '25px' }}>
-                                Puedes pagar el total de la cuenta pendiente o seleccionar productos específicos para dividir el pago.
+                                {t("Como_quieres_pagar_desc", "Puedes pagar el total de la cuenta pendiente o seleccionar productos específicos para dividir el pago.")}
                             </p>
                             
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -954,7 +956,7 @@ const VistaCliente = () => {
                                         fontSize: '16px', cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(236,146,19, 0.2)' 
                                     }}
                                 >
-                                    Pagar todo ({totalPendientePago.toFixed(2)}€)
+                                    {t('Pagar_todo', 'Pagar todo')} ({totalPendientePago.toFixed(2)}€)
                                 </button>
                                 
                                 <button 
@@ -969,7 +971,7 @@ const VistaCliente = () => {
                                         fontSize: '16px', cursor: 'pointer' 
                                     }}
                                 >
-                                    Seleccionar productos
+                                    {t("Seleccionar_productos", "Seleccionar productos")}
                                 </button>
                                 
                                 <button 
@@ -979,7 +981,7 @@ const VistaCliente = () => {
                                         color: '#94a3b8', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer' 
                                     }}
                                 >
-                                    Cancelar
+                                    {t("Cancelar", "Cancelar")}
                                 </button>
                             </div>
                         </div>
