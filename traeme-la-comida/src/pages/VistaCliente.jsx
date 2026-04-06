@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import './VistaCliente.css';
 import { getMenuCliente } from '../services/apiMenuManager';
-import { 
-    submitOrder, 
-    getMesaByUuid, 
-    solicitarPago as solicitarPagoApi, 
+import {
+    submitOrder,
+    getMesaByUuid,
+    solicitarPago as solicitarPagoApi,
     llamarCamarero as llamarCamareroApi,
     getPedidoActivo,
     getDetallesPedido,
@@ -17,6 +17,7 @@ import { getConfiguracionLocal } from '../services/apiAuth';
 import { useCustomModal } from '../components/useCustomModal';
 import { useTranslation, Trans } from 'react-i18next';
 import LanguageSelector from '../components/LanguageSelector';
+import { voiceService } from '../services/voiceService';
 
 const VistaCliente = () => {
     const { t } = useTranslation();
@@ -96,7 +97,7 @@ const VistaCliente = () => {
         const hydrateAndPollStatus = async () => {
             try {
                 const pedido = await getPedidoActivo(mesa.id);
-                
+
                 // Si ya no hay pedido activo, pero teníamos items enviados pendientes de pago,
                 // significa que el camarero ha cerrado la mesa y la cuenta ha sido saldada.
                 if (!pedido) {
@@ -114,20 +115,24 @@ const VistaCliente = () => {
                 // Si hay pedido, hidratamos o actualizamos estados
                 const detalles = await getDetallesPedido(pedido.id);
                 if (detalles && detalles.length > 0) {
-                     const newCarrito = detalles.map(det => ({
-                         id_detalle: det.id,
-                         producto: { id: det.id_producto, nombre: det.producto?.nombre || 'Producto', precio: det.precio_unitario },
-                         nombre: det.producto?.nombre || 'Producto',
-                         precioFinal: det.precio_unitario,
-                         extrasAplicados: det.seleccionesOpciones?.map(sel => ({
-                             opcionSeleccionada: { id: sel.id_opcion, nombre: sel.opcion?.nombre || '', suplemento: sel.precio_extra_aplicado }
-                         })) || [],
-                         nota: det.notas,
-                         enviado: true,
-                         estadoPago: det.estado === 'pagado' ? 'pagado' : (det.estado === 'solicitado_mesa' ? 'solicitado_mesa' : null)
-                     }));
-                     // Solo actualizamos si hay cambios reales para evitar re-renders infinitos o pérdida de estado local efímero
-                     setCarrito(newCarrito);
+                    const newCarrito = detalles.map(det => ({
+                        id_detalle: det.id,
+                        producto: { id: det.id_producto, nombre: det.producto?.nombre || 'Producto', precio: det.precio_unitario },
+                        nombre: det.producto?.nombre || 'Producto',
+                        precioFinal: det.precio_unitario,
+                        extrasAplicados: det.seleccionesOpciones?.map(sel => ({
+                            opcionSeleccionada: { id: sel.id_opcion, nombre: sel.opcion?.nombre || '', suplemento: sel.precio_extra_aplicado }
+                        })) || [],
+                        nota: det.notas,
+                        enviado: true,
+                        estadoPago: det.estado === 'pagado' ? 'pagado' : (det.estado === 'solicitado_mesa' ? 'solicitado_mesa' : null),
+                        estado: det.estado
+                    }));
+                    // MERGE LOGIC: Keep local items (not sent) and replace sent items with fresh DB state
+                    setCarrito(prev => {
+                        const localItems = prev.filter(item => !item.enviado);
+                        return [...localItems, ...newCarrito];
+                    });
                 }
             } catch (err) {
                 console.error("Error polling order status:", err);
@@ -171,7 +176,7 @@ const VistaCliente = () => {
                         [grupoId]: [...seleccionesActuales, opcion]
                     });
                 } else {
-                    showAlert(t('max_opciones_alert', {max}), 'warning');
+                    showAlert(t('max_opciones_alert', { max }), 'warning');
                 }
             }
         }
@@ -298,7 +303,7 @@ const VistaCliente = () => {
             return item;
         });
         setCarrito(nuevoCarrito);
-        
+
         if (mesa) {
             try {
                 const pedido = await getPedidoActivo(mesa.id);
@@ -331,13 +336,13 @@ const VistaCliente = () => {
             return item;
         });
         setCarrito(nuevoCarrito);
-        
+
         if (mesa) {
             try {
                 const pedido = await getPedidoActivo(mesa.id);
                 if (pedido) {
                     await registrarPago(pedido.id, monto, metodo);
-                    
+
                     // MARCAMOS LOS DETALLES COMO PAGADOS EN EL BACKEND
                     for (const i of indices) {
                         const item = carrito[i];
@@ -418,48 +423,132 @@ const VistaCliente = () => {
         }
     };
 
-    const iniciarEscuchaVoz = () => {
-        setEstadoVoz('escuchando');
-        setMensajeVoz(t('Escuchando_voz'));
+    const iniciarEscuchaVoz = async () => {
+        console.log("User: Pulsó botón de voz (Modo Universal)");
+        try {
+            setEstadoVoz('escuchando');
+            setMensajeVoz(t('Escuchando_voz'));
+            await voiceService.startRecording();
+        } catch (err) {
+            console.error("Error al iniciar grabación universal:", err);
+            setEstadoVoz(null);
+            showAlert(t('Algo_salio_mal'), 'error');
+        }
     };
 
-    const detenerEscuchaVoz = () => {
-        setEstadoVoz('procesando');
-        setMensajeVoz(t('Procesando_voz'));
-
-        setTimeout(() => {
-            const exito = Math.random() > 0.3;
-
-            if (exito) {
-                setEstadoVoz('exito');
-                setMensajeVoz(t('Exito_voz'));
-
-                const prodSimulado = menuData.length > 0 ? menuData[0].productos[0] : null;
-
-                if (prodSimulado) {
-                    setCarrito(prev => [...prev, {
-                        ...prodSimulado,
-                        precioFinal: prodSimulado.precio,
-                        opcionesAplicadas: [],
-                        nota: "Pedido por voz asistente",
-                        enviado: false,
-                        estadoPago: null
-                    }]);
+    const detenerEscuchaVoz = async () => {
+        if (voiceService.isRecording) {
+            setEstadoVoz('procesando');
+            setMensajeVoz(t('Procesando_voz'));
+            try {
+                const audioBlob = await voiceService.stopRecording();
+                const transcript = await voiceService.transcribe(audioBlob);
+                console.log("Universal Speech: Transcripción:", transcript);
+                
+                if (transcript && transcript.trim().length > 0) {
+                    analizarPedidoVoz(transcript);
+                } else {
+                    throw new Error("Transcripción vacía");
                 }
-
-                setTimeout(() => {
-                    setEstadoVoz(null);
-                    setSeccionActiva('pedido');
-                }, 2500);
-
-            } else {
+            } catch (err) {
+                console.error("Error en flujo de voz universal:", err);
                 setEstadoVoz('error');
                 setMensajeVoz(t('Error_voz'));
+                setTimeout(() => setEstadoVoz(null), 3000);
             }
-        }, 1500);
+        }
     };
 
-    const cancelarVoz = () => setEstadoVoz(null);
+    const cancelarVoz = () => {
+        if (voiceService.isRecording) {
+            voiceService.stopRecording().catch(() => {});
+        }
+        setEstadoVoz(null);
+    };
+
+    const analizarPedidoVoz = async (transcript) => {
+        let textoRestante = transcript.toLowerCase();
+        let productoMatch = null;
+
+        const todosProductos = [];
+        menuData.forEach(cat => {
+            cat.productos?.forEach(p => {
+                todosProductos.push({ p, cat });
+            });
+        });
+
+        // Ordenar por longitud de nombre para evitar matches parciales erróneos
+        todosProductos.sort((a, b) => (t(b.p.nombre).length + b.p.nombre.length) - (t(a.p.nombre).length + a.p.nombre.length));
+
+        for (const { p } of todosProductos) {
+            const nombreOriginal = p.nombre.toLowerCase();
+            const nombreTraducido = t(p.nombre).toLowerCase();
+
+            const regexOrig = new RegExp(`\\b${nombreOriginal}\\b`, 'i');
+            const regexTrad = new RegExp(`\\b${nombreTraducido}\\b`, 'i');
+
+            if (regexOrig.test(textoRestante) || regexTrad.test(textoRestante)) {
+                productoMatch = p;
+                textoRestante = textoRestante.replace(nombreOriginal, '').replace(nombreTraducido, '');
+                break;
+            }
+        }
+
+        if (!productoMatch) {
+            setEstadoVoz('error');
+            setMensajeVoz(t('Error_voz'));
+            return;
+        }
+
+        const opcionesEncontradas = {};
+        let precioExtraTotal = 0;
+        let nombresOpciones = [];
+
+        productoMatch.gruposOpciones?.forEach(grupo => {
+            opcionesEncontradas[grupo.id] = [];
+            grupo.opciones?.forEach(opt => {
+                const optOriginal = opt.nombre.toLowerCase();
+                const optTraducida = t(opt.nombre).toLowerCase();
+
+                const regO = new RegExp(`\\b${optOriginal}\\b`, 'i');
+                const regT = new RegExp(`\\b${optTraducida}\\b`, 'i');
+
+                if (regO.test(textoRestante) || regT.test(textoRestante)) {
+                    opcionesEncontradas[grupo.id].push(opt);
+                    precioExtraTotal += opt.suplemento;
+                    nombresOpciones.push(t(opt.nombre));
+                    textoRestante = textoRestante.replace(optOriginal, '').replace(optTraducida, '');
+                }
+            });
+        });
+
+        const notaFinal = textoRestante.replace(/por favor|quiero|un|una|unas|unos/g, '').trim().replace(/^,+|,+$/g, '');
+
+        setEstadoVoz(null);
+        let descItem = t(productoMatch.nombre);
+        if (nombresOpciones.length > 0) descItem += " (" + nombresOpciones.join(", ") + ")";
+        if (notaFinal) descItem += " [" + notaFinal + "]";
+
+        const mensajeConfirm = t('Confirm_voz_pedido', { item: descItem });
+
+        if (await showConfirm(mensajeConfirm, t('Pedido_por_voz'))) {
+            const nuevoItem = {
+                producto: { id: productoMatch.id, nombre: productoMatch.nombre, precio: productoMatch.precio },
+                nombre: productoMatch.nombre,
+                precioFinal: productoMatch.precio + precioExtraTotal,
+                extrasAplicados: Object.entries(opcionesEncontradas).flatMap(([grupoId, opts]) =>
+                    opts.map(o => ({
+                        opcionSeleccionada: { id: o.id, nombre: o.nombre, suplemento: o.suplemento }
+                    }))
+                ),
+                nota: notaFinal,
+                enviado: false
+            };
+            setCarrito(prev => [...prev, nuevoItem]);
+            showAlert(t('Exito_voz'), 'success');
+            setSeccionActiva('pedido');
+        }
+    };
 
     const totalPrecioCarrito = carrito.reduce((acc, item) => acc + item.precioFinal, 0);
     const totalPendientePago = carrito.filter(item => !item.estadoPago).reduce((acc, item) => acc + item.precioFinal, 0);
@@ -500,7 +589,7 @@ const VistaCliente = () => {
             <div className={`vista-cliente-container ${(productoModal || estadoVoz) ? 'no-scroll' : ''}`}>
                 <header className="vc-header">
                     <div className="vc-header-icon">
-                        {configNegocio.logo_url ? (
+                        {configNegocio.logo_url && configNegocio.logo_url !== "" ? (
                             <img src={configNegocio.logo_url} alt="Logo" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
                         ) : (
                             <span className="material-symbols-outlined">restaurant</span>
@@ -553,7 +642,7 @@ const VistaCliente = () => {
                                 .filter(cat => filtroActivo === 'Todo' || cat.nombre === filtroActivo)
                                 .map(cat => cat.productos.map(prod => (
                                     <div key={prod.id} className="vc-card" onClick={() => abrirModalProducto(prod, cat)}>
-                                        <img src={prod.img} className="vc-card-img" alt={prod.nombre} />
+                                        {prod.img && prod.img !== "" && <img src={prod.img} className="vc-card-img" alt={prod.nombre} />}
                                         <div className="vc-card-info">
                                             <h4>{t(prod.nombre)}</h4>
                                             <p className="vc-card-desc">{t(prod.desc)}</p>
@@ -587,8 +676,8 @@ const VistaCliente = () => {
                                                 <div className="vc-pedido-header">
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%' }}>
                                                         {modoSeleccionPago && item.enviado && !item.estadoPago && (
-                                                            <input 
-                                                                type="checkbox" 
+                                                            <input
+                                                                type="checkbox"
                                                                 checked={itemsSeleccionadosPago.includes(i)}
                                                                 onChange={(e) => {
                                                                     if (e.target.checked) {
@@ -607,6 +696,8 @@ const VistaCliente = () => {
                                                                     <small style={{ color: '#34a853', marginLeft: '5px' }}>{t('PAGADO_badge')}</small>
                                                                 ) : item.estadoPago === 'solicitado_mesa' ? (
                                                                     <small style={{ color: '#3b82f6', marginLeft: '5px' }}>{t('ESPERANDO_COBRO_badge')}</small>
+                                                                ) : item.estado === 'servido' ? (
+                                                                    <small style={{ color: '#0ea5e9', marginLeft: '5px' }}>{t('SERVIDO_badge')}</small>
                                                                 ) : (
                                                                     item.enviado && <small style={{ color: 'var(--primary)', marginLeft: '5px' }}>{t('EN_COCINA_badge')}</small>
                                                                 )}
@@ -656,11 +747,11 @@ const VistaCliente = () => {
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '20px' }}>
                                         {modoSeleccionPago ? (
                                             <>
-                                                <button 
+                                                <button
                                                     onClick={() => {
                                                         const m = metodoDivisionActivo || (metodoPagoMesa === 'card' ? 'Tarjeta' : 'Efectivo');
                                                         iniciarPago(m, itemsSeleccionadosPago);
-                                                    }} 
+                                                    }}
                                                     className="vc-btn-carrito btn-dark"
                                                     disabled={itemsSeleccionadosPago.length === 0}
                                                     style={{ backgroundColor: '#1e293b' }}
@@ -770,7 +861,7 @@ const VistaCliente = () => {
                         {carrito.length > 0 && (
                             <button className="vc-btn-carrito" onClick={() => setSeccionActiva('pedido')}>
                                 <span className="material-symbols-outlined">shopping_basket</span>
-                                {t('VER_MI_PEDIDO', {total: totalPrecioCarrito.toFixed(2)})}
+                                {t('VER_MI_PEDIDO', { total: totalPrecioCarrito.toFixed(2) })}
                             </button>
                         )}
                     </div>
@@ -787,7 +878,7 @@ const VistaCliente = () => {
                         </button>
 
                         <div className="vc-sheet-header">
-                            <img src={productoModal.prod.img} alt="" />
+                            {productoModal.prod.img && productoModal.prod.img !== "" && <img src={productoModal.prod.img} alt="" />}
                             <div className="vc-sheet-title">
                                 <h3>{t(productoModal.prod.nombre)}</h3>
                                 <p>{t(productoModal.prod.desc)}</p>
@@ -807,11 +898,11 @@ const VistaCliente = () => {
                                             {grupo.min_selecciones > 0 ? (
                                                 <span className={`vc-req-badge ${esValido ? 'valido' : 'pendiente'}`}>
                                                     {numSeleccionadas < grupo.min_selecciones
-                                                        ? t('Selecciona_al_menos', {min: grupo.min_selecciones})
-                                                        : t('Minimo_cumplido', {count: numSeleccionadas})}
+                                                        ? t('Selecciona_al_menos', { min: grupo.min_selecciones })
+                                                        : t('Minimo_cumplido', { count: numSeleccionadas })}
                                                 </span>
                                             ) : (
-                                                <span className="vc-opt-badge">{t('Opcional_max', {max: grupo.max_selecciones})}</span>
+                                                <span className="vc-opt-badge">{t('Opcional_max', { max: grupo.max_selecciones })}</span>
                                             )}
                                         </h4>
                                         <div className="vc-options-list">
@@ -860,7 +951,7 @@ const VistaCliente = () => {
                                 disabled={!validarSelecciones()}
                             >
                                 {validarSelecciones()
-                                    ? t('Anadir_carrito_btn', {precio: calcularPrecioFinalItem().toFixed(2)})
+                                    ? t('Anadir_carrito_btn', { precio: calcularPrecioFinalItem().toFixed(2) })
                                     : t('Completa_opciones')}
                             </button>
                         </div>
@@ -923,8 +1014,8 @@ const VistaCliente = () => {
                     <div className="vc-modal-backdrop" onClick={() => setModalDivisionPago(null)}></div>
                     <div className="vc-product-sheet" style={{ height: 'auto', paddingBottom: '30px' }}>
                         <div style={{ padding: '25px 20px', textAlign: 'center' }}>
-                            <div style={{ 
-                                width: '60px', height: '60px', backgroundColor: 'var(--primary-soft)', borderRadius: '50%', 
+                            <div style={{
+                                width: '60px', height: '60px', backgroundColor: 'var(--primary-soft)', borderRadius: '50%',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px',
                                 color: 'var(--primary)'
                             }}>
@@ -934,51 +1025,51 @@ const VistaCliente = () => {
                             <p style={{ color: '#64748b', fontSize: '15px', lineHeight: '1.5', marginBottom: '25px' }}>
                                 {t("Como_quieres_pagar_desc", "Puedes pagar el total de la cuenta pendiente o seleccionar productos específicos para dividir el pago.")}
                             </p>
-                            
+
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                <button 
+                                <button
                                     onClick={async () => {
                                         const indices = carrito
                                             .map((item, index) => ({ item, index }))
                                             .filter(({ item }) => item.enviado && !item.estadoPago)
                                             .map(({ index }) => index);
-                                            
+
                                         const m = modalDivisionPago.metodo;
                                         setModalDivisionPago(null);
-                                        
+
                                         const esDigital = m.toLowerCase() === 'bizum' || m.toLowerCase().includes('google') || m.toLowerCase().includes('gpay');
                                         if (!esDigital) await ejecutarPagoMesa(indices, m);
                                         else await ejecutarPagoDigital(indices, m);
                                     }}
-                                    style={{ 
-                                        padding: '16px', borderRadius: '12px', border: 'none', 
-                                        backgroundColor: 'var(--primary)', color: 'white', fontWeight: 'bold', 
-                                        fontSize: '16px', cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(236,146,19, 0.2)' 
+                                    style={{
+                                        padding: '16px', borderRadius: '12px', border: 'none',
+                                        backgroundColor: 'var(--primary)', color: 'white', fontWeight: 'bold',
+                                        fontSize: '16px', cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(236,146,19, 0.2)'
                                     }}
                                 >
                                     {t('Pagar_todo', 'Pagar todo')} ({totalPendientePago.toFixed(2)}€)
                                 </button>
-                                
-                                <button 
+
+                                <button
                                     onClick={() => {
                                         setModoSeleccionPago(true);
                                         setItemsSeleccionadosPago([]);
                                         setModalDivisionPago(null);
                                     }}
-                                    style={{ 
-                                        padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', 
-                                        backgroundColor: 'white', color: '#1e293b', fontWeight: 'bold', 
-                                        fontSize: '16px', cursor: 'pointer' 
+                                    style={{
+                                        padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0',
+                                        backgroundColor: 'white', color: '#1e293b', fontWeight: 'bold',
+                                        fontSize: '16px', cursor: 'pointer'
                                     }}
                                 >
                                     {t("Seleccionar_productos", "Seleccionar productos")}
                                 </button>
-                                
-                                <button 
+
+                                <button
                                     onClick={() => setModalDivisionPago(null)}
-                                    style={{ 
-                                        marginTop: '10px', background: 'none', border: 'none', 
-                                        color: '#94a3b8', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer' 
+                                    style={{
+                                        marginTop: '10px', background: 'none', border: 'none',
+                                        color: '#94a3b8', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer'
                                     }}
                                 >
                                     {t("Cancelar", "Cancelar")}
@@ -988,7 +1079,7 @@ const VistaCliente = () => {
                     </div>
                 </>
             )}
-            
+
             <ModalComponent />
         </div>
     );

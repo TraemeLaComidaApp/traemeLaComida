@@ -16,6 +16,7 @@ import { useParams } from 'react-router-dom';
 import { useCustomModal } from '../components/useCustomModal';
 import { useTranslation, Trans } from 'react-i18next';
 import LanguageSelector from '../components/LanguageSelector';
+import { voiceService } from '../services/voiceService';
 
 const VistaBarra = () => {
     const { t } = useTranslation();
@@ -126,9 +127,14 @@ const VistaBarra = () => {
                         })) || [],
                         nota: det.notas,
                         enviado: true,
-                        estadoPago: det.estado === 'pagado' ? 'pagado' : null
+                        estadoPago: det.estado === 'pagado' ? 'pagado' : (det.estado === 'solicitado_mesa' ? 'solicitado_mesa' : null),
+                        estado: det.estado
                     }));
-                    setCarrito(newCarrito);
+                    // MERGE LOGIC: Keep local items (not sent) and replace sent items with fresh DB state
+                    setCarrito(prev => {
+                        const localItems = prev.filter(item => !item.enviado);
+                        return [...localItems, ...newCarrito];
+                    });
                     if (pedido.estado === 'pendiente_cobro') setEsperandoCobro(true);
                     if (pedido.estado === 'cerrado') setPagoSolicitado(true);
                 }
@@ -305,47 +311,132 @@ const VistaBarra = () => {
         // Obsoleto: El sistema sincroniza automáticamente vía polling.
     };
 
-    const iniciarEscuchaVoz = () => {
-        setEstadoVoz('escuchando');
-        setMensajeVoz(t('Escuchando_voz'));
+    const iniciarEscuchaVoz = async () => {
+        console.log("User (Barra): Pulsó botón de voz (Modo Universal)");
+        try {
+            setEstadoVoz('escuchando');
+            setMensajeVoz(t('Escuchando_voz'));
+            await voiceService.startRecording();
+        } catch (err) {
+            console.error("Error al iniciar grabación universal en barra:", err);
+            setEstadoVoz(null);
+            showAlert(t('Algo_salio_mal'), 'error');
+        }
     };
 
-    const detenerEscuchaVoz = () => {
-        setEstadoVoz('procesando');
-        setMensajeVoz(t('Procesando_voz'));
-
-        setTimeout(() => {
-            const exito = Math.random() > 0.3;
-
-            if (exito) {
-                setEstadoVoz('exito');
-                setMensajeVoz(t('Exito_voz'));
-
-                const prodSimulado = menuData.length > 2 ? menuData[2].productos[0] : null;
-
-                if (prodSimulado) {
-                    setCarrito(prev => [...prev, {
-                        ...prodSimulado,
-                        precioFinal: prodSimulado.precio,
-                        opcionesAplicadas: [],
-                        nota: "Pedido rápido por voz",
-                        enviado: false
-                    }]);
+    const detenerEscuchaVoz = async () => {
+        if (voiceService.isRecording) {
+            setEstadoVoz('procesando');
+            setMensajeVoz(t('Procesando_voz'));
+            try {
+                const audioBlob = await voiceService.stopRecording();
+                const transcript = await voiceService.transcribe(audioBlob);
+                console.log("Universal Speech (Barra): Transcripción:", transcript);
+                
+                if (transcript && transcript.trim().length > 0) {
+                    analizarPedidoVoz(transcript);
+                } else {
+                    throw new Error("Transcripción vacía");
                 }
-
-                setTimeout(() => {
-                    setEstadoVoz(null);
-                    setSeccionActiva('pedido');
-                }, 2500);
-
-            } else {
+            } catch (err) {
+                console.error("Error en flujo de voz universal en barra:", err);
                 setEstadoVoz('error');
                 setMensajeVoz(t('Error_voz'));
+                setTimeout(() => setEstadoVoz(null), 3000);
             }
-        }, 1500);
+        }
     };
 
-    const cancelarVoz = () => setEstadoVoz(null);
+    const cancelarVoz = () => {
+        if (voiceService.isRecording) {
+            voiceService.stopRecording().catch(() => {});
+        }
+        setEstadoVoz(null);
+    };
+
+    const analizarPedidoVoz = async (transcript) => {
+        let textoRestante = transcript.toLowerCase();
+        let productoMatch = null;
+
+        const todosProductos = [];
+        menuData.forEach(cat => {
+            cat.productos?.forEach(p => {
+                todosProductos.push({ p, cat });
+            });
+        });
+
+        todosProductos.sort((a, b) => (t(b.p.nombre).length + b.p.nombre.length) - (t(a.p.nombre).length + a.p.nombre.length));
+
+        for (const { p } of todosProductos) {
+            const nombreOriginal = p.nombre.toLowerCase();
+            const nombreTraducido = t(p.nombre).toLowerCase();
+
+            const regexOrig = new RegExp(`\\b${nombreOriginal}\\b`, 'i');
+            const regexTrad = new RegExp(`\\b${nombreTraducido}\\b`, 'i');
+
+            if (regexOrig.test(textoRestante) || regexTrad.test(textoRestante)) {
+                productoMatch = p;
+                textoRestante = textoRestante.replace(nombreOriginal, '').replace(nombreTraducido, '');
+                break;
+            }
+        }
+
+        if (!productoMatch) {
+            setEstadoVoz('error');
+            setMensajeVoz(t('Error_voz'));
+            return;
+        }
+
+        const opcionesEncontradas = {};
+        let precioExtraTotal = 0;
+        let nombresOpciones = [];
+
+        productoMatch.gruposOpciones?.forEach(grupo => {
+            opcionesEncontradas[grupo.id] = [];
+            grupo.opciones?.forEach(opt => {
+                const optOriginal = opt.nombre.toLowerCase();
+                const optTraducida = t(opt.nombre).toLowerCase();
+                
+                const regO = new RegExp(`\\b${optOriginal}\\b`, 'i');
+                const regT = new RegExp(`\\b${optTraducida}\\b`, 'i');
+
+                if (regO.test(textoRestante) || regT.test(textoRestante)) {
+                    opcionesEncontradas[grupo.id].push(opt);
+                    precioExtraTotal += opt.suplemento;
+                    nombresOpciones.push(t(opt.nombre));
+                    textoRestante = textoRestante.replace(optOriginal, '').replace(optTraducida, '');
+                }
+            });
+        });
+
+        const notaFinal = textoRestante.replace(/por favor|quiero|un|una|unas|unos/g, '').trim().replace(/^,+|,+$/g, '');
+
+        setEstadoVoz(null);
+        let descItem = t(productoMatch.nombre);
+        if (nombresOpciones.length > 0) descItem += " (" + nombresOpciones.join(", ") + ")";
+        if (notaFinal) descItem += " [" + notaFinal + "]";
+
+        const mensajeConfirm = t('Confirm_voz_pedido', { item: descItem });
+        
+        if (await showConfirm(mensajeConfirm, t('Pedido_por_voz'))) {
+            const nuevoItem = {
+                producto: { id: productoMatch.id, nombre: productoMatch.nombre, precio: productoMatch.precio },
+                nombre: productoMatch.nombre,
+                precioFinal: productoMatch.precio + precioExtraTotal,
+                extrasAplicados: Object.entries(opcionesEncontradas).flatMap(([grupoId, opts]) => 
+                    opts.map(o => ({ 
+                        opcionSeleccionada: { id: o.id, nombre: o.nombre, suplemento: o.suplemento } 
+                    }))
+                ),
+                nota: notaFinal,
+                enviado: false
+            };
+            setCarrito(prev => [...prev, nuevoItem]);
+            showAlert(t('Exito_voz'), 'success');
+            setSeccionActiva('pedido');
+        }
+    };
+
 
     const totalPrecioCarrito = carrito.reduce((acc, item) => acc + item.precioFinal, 0);
 
@@ -368,7 +459,7 @@ const VistaBarra = () => {
             <div className={`vb-main-wrapper ${(productoModal || estadoVoz) ? 'no-scroll' : ''}`}>
                 <header className="vb-header">
                     <div className="vb-header-icon">
-                        {configNegocio.logo_url ? (
+                        {configNegocio.logo_url && configNegocio.logo_url !== "" ? (
                             <img src={configNegocio.logo_url} alt="Logo" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
                         ) : (
                             <span className="material-symbols-outlined">restaurant</span>
@@ -421,7 +512,7 @@ const VistaBarra = () => {
                                 .filter(cat => filtroActivo === 'Todo' || cat.nombre === filtroActivo)
                                 .map(cat => cat.productos.map(prod => (
                                     <div key={prod.id} className="vb-card" onClick={() => abrirModalProducto(prod, cat)}>
-                                        <img src={prod.img} className="vb-card-img" alt={prod.nombre} />
+                                        {prod.img && prod.img !== "" && <img src={prod.img} className="vb-card-img" alt={prod.nombre} />}
                                         <div className="vb-card-info">
                                             <h4>{t(prod.nombre)}</h4>
                                             <p className="vb-card-desc">{t(prod.desc)}</p>
@@ -454,9 +545,18 @@ const VistaBarra = () => {
                                             <div className="vb-pedido-content">
                                                 <div className="vb-pedido-header">
                                                     <div>
-                                                        <span className="vb-pedido-name">
-                                                            {t(item.nombre)} {item.enviado && <small>{t('PAGADO_badge')}</small>}
-                                                        </span>
+                                                         <div style={{ flex: 1 }}>
+                                                            <span className="vb-pedido-name">
+                                                                {t(item.nombre)}
+                                                                {item.estadoPago === 'pagado' ? (
+                                                                    <small style={{ color: '#34a853', marginLeft: '5px' }}>{t('PAGADO_badge')}</small>
+                                                                ) : item.estado === 'servido' ? (
+                                                                    <small style={{ color: '#0ea5e9', marginLeft: '5px' }}>{t('SERVIDO_badge')}</small>
+                                                                ) : (
+                                                                    item.enviado && <small style={{ color: 'var(--primary)', marginLeft: '5px' }}>{t('EN_COCINA_badge')}</small>
+                                                                )}
+                                                            </span>
+                                                        </div>
                                                         <span className="vb-pedido-price">{item.precioFinal.toFixed(2)}€</span>
                                                     </div>
                                                     {!item.enviado && !esperandoCobro && (
@@ -591,7 +691,7 @@ const VistaBarra = () => {
                         </button>
 
                         <div className="vb-sheet-header">
-                            <img src={productoModal.prod.img} alt="" />
+                            {productoModal.prod.img && productoModal.prod.img !== "" && <img src={productoModal.prod.img} alt="" />}
                             <div className="vb-sheet-title">
                                 <h3>{t(productoModal.prod.nombre)}</h3>
                                 <p>{t(productoModal.prod.desc)}</p>

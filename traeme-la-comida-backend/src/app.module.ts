@@ -17,11 +17,13 @@ import { SeleccionOpcionModule } from './seleccion-opcion/seleccion-opcion.modul
 import { PagoModule } from './pago/pago.module';
 import { UsuarioModule } from './usuario/usuario.module';
 import { SupabaseModule } from './supabase/supabase.module';
+import { VoiceModule } from './voice/voice.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    ConfiguracionLocalModule, SalaModule, MesaModule, CategoriaProductoModule, ProductoModule, CategoriaOpcionModule, ProductoCategoriaOpcionModule, OpcionModule, PedidoModule, DetallePedidoModule, SeleccionOpcionModule, PagoModule, UsuarioModule, SupabaseModule
+    ConfiguracionLocalModule, SalaModule, MesaModule, CategoriaProductoModule, ProductoModule, CategoriaOpcionModule, ProductoCategoriaOpcionModule, OpcionModule, PedidoModule, DetallePedidoModule, SeleccionOpcionModule, PagoModule, UsuarioModule, SupabaseModule,
+    VoiceModule
   ],
   controllers: [AppController],
   providers: [AppService],
