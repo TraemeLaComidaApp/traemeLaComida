@@ -428,7 +428,7 @@ const VistaCliente = () => {
         try {
             setEstadoVoz('escuchando');
             setMensajeVoz(t('Escuchando_voz'));
-            await voiceService.startRecording();
+            await voiceService.startRecording(() => detenerEscuchaVoz());
         } catch (err) {
             console.error("Error al iniciar grabación universal:", err);
             setEstadoVoz(null);

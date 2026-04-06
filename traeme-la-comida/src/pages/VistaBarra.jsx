@@ -256,7 +256,21 @@ const VistaBarra = () => {
             const itemsPorEnviar = carrito.filter(item => !item.enviado);
             if (itemsPorEnviar.length === 0) return;
 
-            const n_pedido_barra = Math.floor(Math.random() * 999) + 1;
+            // Cálculo del número de pedido: Secuencial por día
+            let n_pedido_barra = 1;
+            try {
+                const todosPedidos = await fetchApi('/pedido') || [];
+                const hoy = new Date().toISOString().split('T')[0];
+                const pedidosHoy = todosPedidos.filter(p => 
+                    p.id_mesa === idMesaBarra && 
+                    p.creado_at?.startsWith(hoy)
+                );
+                // El nuevo número es el total de registrados hoy + 1
+                n_pedido_barra = pedidosHoy.length + 1;
+            } catch (err) {
+                console.error("Error calculando número secuencial, usando fallback random:", err);
+                n_pedido_barra = Math.floor(Math.random() * 999) + 1;
+            }
 
             try {
                 if (!idMesaBarra) {
@@ -316,7 +330,7 @@ const VistaBarra = () => {
         try {
             setEstadoVoz('escuchando');
             setMensajeVoz(t('Escuchando_voz'));
-            await voiceService.startRecording();
+            await voiceService.startRecording(() => detenerEscuchaVoz());
         } catch (err) {
             console.error("Error al iniciar grabación universal en barra:", err);
             setEstadoVoz(null);

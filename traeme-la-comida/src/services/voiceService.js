@@ -7,7 +7,7 @@ class VoiceService {
         this.isRecording = false;
     }
 
-    async startRecording() {
+    async startRecording(onTimeout = null) {
         if (this.isRecording) return;
         
         try {
@@ -30,6 +30,16 @@ class VoiceService {
             this.mediaRecorder.start();
             this.isRecording = true;
             console.log("Grabación iniciada con mimeType:", mimeType);
+
+            // Timer de seguridad: 30 segundos (Límite Groq API gratuita)
+            this.recordingTimeout = setTimeout(() => {
+                if (this.isRecording) {
+                    console.log("Límite de 30 segundos alcanzado. Deteniendo automáticamente...");
+                    if (onTimeout) onTimeout();
+                    else this.stopRecording().catch(console.error);
+                }
+            }, 30000);
+
         } catch (error) {
             console.error("Error al iniciar grabación:", error);
             throw error;
@@ -37,6 +47,11 @@ class VoiceService {
     }
 
     stopRecording() {
+        if (this.recordingTimeout) {
+            clearTimeout(this.recordingTimeout);
+            this.recordingTimeout = null;
+        }
+
         return new Promise((resolve, reject) => {
             if (!this.mediaRecorder || !this.isRecording) {
                 return reject("No hay grabación en curso");
