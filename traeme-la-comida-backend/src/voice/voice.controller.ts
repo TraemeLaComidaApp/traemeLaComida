@@ -56,4 +56,32 @@ export class VoiceController {
        throw new HttpException('Translation failed', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
+
+  @Post('translate-batch')
+  @ApiOperation({ summary: 'Translate multiple menu keys and save them to i18n.js in a single batch' })
+  async translateMenuBatch(@Body() body: { items: { text: string; key: string }[] }) {
+    const { items } = body;
+    if (!items || !Array.isArray(items)) {
+      throw new HttpException('Items array is required', HttpStatus.BAD_REQUEST);
+    }
+
+    try {
+      const texts = items.map(i => i.text);
+      const translatedResults = await this.voiceService.translateBatch(texts);
+      
+      const batchToSave = items.map((item, index) => {
+        const trans = translatedResults.find(r => r.original === item.text) || { en: item.text, fr: item.text, de: item.text };
+        return {
+          key: item.key,
+          translations: { es: item.text, ...trans }
+        };
+      });
+
+      await this.voiceService.addBatchTranslationsToFile(batchToSave);
+      return { success: true, processed: batchToSave.length };
+    } catch (error) {
+      this.logger.error('Error in batch translation:', error);
+      throw new HttpException('Batch translation failed', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
 }

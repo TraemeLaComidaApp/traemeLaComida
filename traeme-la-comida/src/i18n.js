@@ -5,6 +5,11 @@ import LanguageDetector from 'i18next-browser-languagedetector';
 const resources = {
   es: {
     translation: {
+      "Zumo de piña": "Zumo de piña",
+      "Zumo de melocotón": "Zumo de melocotón",
+      "Grande": "Grande",
+      "Tamaño": "Tamaño",
+      "ZUMOS": "ZUMOS",
       "Café sólo": "Café sólo",
       "Café con leche": "Café con leche",
       "Tostada de huevos rotos con jamón": "Tostada de huevos rotos con jamón",
@@ -126,6 +131,11 @@ const resources = {
   },
   en: {
     translation: {
+      "Zumo de piña": "Pineapple juice",
+      "Zumo de melocotón": "Peach juice",
+      "Grande": "Large",
+      "Tamaño": "Size",
+      "ZUMOS": "Juices",
       "Café sólo": "Espresso",
       "Café con leche": "Coffee with milk",
       "Tostada de huevos rotos con jamón": "Toast with broken eggs and ham",
@@ -247,6 +257,11 @@ const resources = {
   },
   fr: {
     translation: {
+      "Zumo de piña": "Jus d'ananas",
+      "Zumo de melocotón": "Jus de pêche",
+      "Grande": "Grand",
+      "Tamaño": "Taille",
+      "ZUMOS": "Jus",
       "Café sólo": "Café noir",
       "Café con leche": "Café au lait",
       "Tostada de huevos rotos con jamón": "Tartine d'œufs cassés au jambon",
@@ -368,6 +383,11 @@ const resources = {
   },
   de: {
     translation: {
+      "Zumo de piña": "Ananassaft",
+      "Zumo de melocotón": "Pfirsichsaft",
+      "Grande": "Groß",
+      "Tamaño": "Größe",
+      "ZUMOS": "Säfte",
       "Café sólo": "Schwarzer Kaffee",
       "Café con leche": "Milchkaffee",
       "Tostada de huevos rotos con jamón": "Toast mit Spiegeleiern und Schinken",

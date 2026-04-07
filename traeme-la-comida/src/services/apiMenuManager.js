@@ -124,6 +124,8 @@ export const guardarMenuCompletoAdmin = async (categoriasConfig) => {
     }
 
     // 3. PROCESAR GUARDADO (UPSERT)
+    const translationQueue = new Set(); // Usar Set para evitar duplicados en la cola
+
     for (const cat of categoriasConfig) {
         let catId = cat.id;
 
@@ -133,8 +135,7 @@ export const guardarMenuCompletoAdmin = async (categoriasConfig) => {
                 body: JSON.stringify({ nombre: String(cat.nombre), orden: Number(cat.orden) })
             });
             catId = data?.id || data?.data?.id || (Array.isArray(data) && data[0]?.id);
-            // Traducir categoría nueva
-            if (catId) await fetchApi('/voice/translate-menu', { method: 'POST', body: JSON.stringify({ text: cat.nombre, key: cat.nombre }) }).catch(console.error);
+            if (catId) translationQueue.add(cat.nombre);
         } else {
             await fetchApi(`/categoria-producto/${cat.id}`, {
                 method: 'PATCH',
@@ -186,10 +187,10 @@ export const guardarMenuCompletoAdmin = async (categoriasConfig) => {
 
             if (!prodId) continue;
             
-            // Traducir producto nuevo
+            // Queue translation
             if (isNewProd) {
-                await fetchApi('/voice/translate-menu', { method: 'POST', body: JSON.stringify({ text: prod.nombre, key: prod.nombre }) }).catch(console.error);
-                if (prod.desc) await fetchApi('/voice/translate-menu', { method: 'POST', body: JSON.stringify({ text: prod.desc, key: prod.desc }) }).catch(console.error);
+                translationQueue.add(prod.nombre);
+                if (prod.descripcion || prod.desc) translationQueue.add(prod.descripcion || prod.desc);
             }
 
             // Limpiar relaciones de opciones
@@ -214,7 +215,7 @@ export const guardarMenuCompletoAdmin = async (categoriasConfig) => {
                             grupoId = data?.id || data?.data?.id || (Array.isArray(data) && data[0]?.id);
                             if (grupoId) {
                                 dbCatOpciones.push({ id: grupoId, nombre: grupo.nombre });
-                                await fetchApi('/voice/translate-menu', { method: 'POST', body: JSON.stringify({ text: grupo.nombre, key: grupo.nombre }) }).catch(console.error);
+                                translationQueue.add(grupo.nombre);
                             }
                         }
                     } else {
@@ -226,7 +227,6 @@ export const guardarMenuCompletoAdmin = async (categoriasConfig) => {
                     for (const op of grupo.opciones) {
                         const opPayload = { id_categoria_opcion: Number(grupoId), nombre: String(op.nombre), precio_extra: Number(op.suplemento) || 0 };
                         if (isNewItem(op.id)) {
-                            // PREVENCIÓN DE DUPLICADOS: Si la opción ya existe por nombre en este grupo, reutilizar
                             const opExistente = dbOpciones.find(o => o.id_categoria_opcion == grupoId && o.nombre.toLowerCase() === op.nombre.toLowerCase());
                             if (opExistente) {
                                 idsOpcionesNuevas.add(Number(opExistente.id));
@@ -236,7 +236,7 @@ export const guardarMenuCompletoAdmin = async (categoriasConfig) => {
                                 if (newId) {
                                     dbOpciones.push({ ...opPayload, id: newId });
                                     idsOpcionesNuevas.add(Number(newId));
-                                    await fetchApi('/voice/translate-menu', { method: 'POST', body: JSON.stringify({ text: op.nombre, key: op.nombre }) }).catch(console.error);
+                                    translationQueue.add(op.nombre);
                                 }
                             }
                         } else {
@@ -255,6 +255,15 @@ export const guardarMenuCompletoAdmin = async (categoriasConfig) => {
                 });
             }
         }
+    }
+
+    // 4. TRADUCCIONES EN BATCH (Al final para evitar recargas prematuras de Vite)
+    if (translationQueue.size > 0) {
+        const items = Array.from(translationQueue).map(text => ({ text, key: text }));
+        await fetchApi('/voice/translate-batch', {
+            method: 'POST',
+            body: JSON.stringify({ items })
+        }).catch(err => console.error("Error en batch translation:", err));
     }
 
     // 4. LIMPIEZA FINAL DE OPCIONES HUÉRFANAS

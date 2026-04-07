@@ -50,13 +50,21 @@ export class VoiceService {
   }
 
   async translate(text: string): Promise<any> {
+    const results = await this.translateBatch([text]);
+    return results[0]?.translations || { en: text, fr: text, de: text };
+  }
+
+  async translateBatch(texts: string[]): Promise<any[]> {
     if (!this.groqApiKey) {
       throw new Error('GROQ_API_KEY not configured');
     }
 
-    const prompt = `Translate the following restaurant menu item/category to English (en), French (fr), and German (de). 
-    Return ONLY a JSON object with the keys 'en', 'fr', 'de'.
-    Input: "${text}"`;
+    if (texts.length === 0) return [];
+
+    const prompt = `Translate the following list of restaurant menu items/categories to English (en), French (fr), and German (de). 
+    Return ONLY a JSON object with a key 'results' which is an array of objects. 
+    Each object must have: 'original' (the input text), 'en', 'fr', 'de'.
+    Input list: ${JSON.stringify(texts)}`;
 
     try {
       const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -73,21 +81,19 @@ export class VoiceService {
         }),
       });
 
-      if (!response.ok) throw new Error('Groq Translation failed');
+      if (!response.ok) throw new Error('Groq Batch Translation failed');
       const data = await response.json();
-      return JSON.parse(data.choices[0].message.content);
+      const parsed = JSON.parse(data.choices[0].message.content);
+      return parsed.results || [];
     } catch (error) {
-      this.logger.error('Error in translate:', error);
-      return { en: text, fr: text, de: text }; // Fallback
+      this.logger.error('Error in translateBatch:', error);
+      return texts.map(t => ({ original: t, en: t, fr: t, de: t }));
     }
   }
 
-  async addTranslationsToFile(key: string, translations: { es: string, en: string, fr: string, de: string }): Promise<void> {
+  async addBatchTranslationsToFile(batch: { key: string, translations: { es: string, en: string, fr: string, de: string } }[]): Promise<void> {
     try {
-      // Usar cwd() es más fiable si el backend se lanza desde su propia carpeta
       const i18nPath = path.resolve(process.cwd(), '../traeme-la-comida/src/i18n.js');
-      this.logger.log(`Intentando actualizar i18n.js en: ${i18nPath}`);
-      
       if (!fs.existsSync(i18nPath)) {
         this.logger.error(`i18n.js NO encontrado en ${i18nPath}`);
         return;
@@ -95,44 +101,37 @@ export class VoiceService {
 
       let content = fs.readFileSync(i18nPath, 'utf8');
 
-      // Helper to insert a key-value pair into a specific language block in i18n.js
-      const insertInBlock = (lang: string, k: string, v: string) => {
-        // Buscamos el inicio del bloque de traducción para ese idioma (ej: "es: { translation: {")
-        const blockStartRegex = new RegExp(`(${lang}:\\s*{\\s*translation:\\s*{)`, 'g');
+      for (const item of batch) {
+        const { key, translations } = item;
         
-        // Buscamos si la clave YA existe dentro de este archivo, pero con cuidado
-        // Para i18n, la clave es la misma para todos los idiomas. 
-        // Queremos saber si ya está en EL BLOQUE de este lenguaje.
-        
-        // Estrategia: Dividimos el contenido por bloques de idiomas
-        const parts = content.split(/(\w{2}:\\s*{\\s*translation:\\s*{)/g);
-        let langFound = false;
-        for (let i = 0; i < parts.length; i++) {
-            if (parts[i].startsWith(`${lang}:`)) {
-                // El siguiente elemento (i+1) es el contenido del bloque
-                if (parts[i+1] && parts[i+1].includes(`"${k}":`)) {
-                    this.logger.log(`La clave "${k}" ya existe en el bloque "${lang}", omitiendo.`);
-                    return;
-                }
-                langFound = true;
-                break;
-            }
-        }
+        const insertInBlock = (lang: string, k: string, v: string) => {
+          const blockStartRegex = new RegExp(`(${lang}:\\s*{\\s*translation:\\s*{)`, 'g');
+          
+          // Check if key already exists in this block
+          const blockContentMatch = content.match(new RegExp(`${lang}:\\s*{\\s*translation:\\s*{([^}]*)}`, 's'));
+          if (blockContentMatch && blockContentMatch[1].includes(`"${k}":`)) {
+            return;
+          }
 
-        const escapedValue = v.replace(/"/g, '\\"');
-        const newEntry = `\n      "${k}": "${escapedValue}",`;
-        content = content.replace(blockStartRegex, `$1${newEntry}`);
-      };
+          const escapedValue = v.replace(/"/g, '\\"');
+          const newEntry = `\n      "${k}": "${escapedValue}",`;
+          content = content.replace(blockStartRegex, `$1${newEntry}`);
+        };
 
-      insertInBlock('es', key, translations.es);
-      insertInBlock('en', key, translations.en);
-      insertInBlock('fr', key, translations.fr);
-      insertInBlock('de', key, translations.de);
+        insertInBlock('es', key, translations.es || key);
+        insertInBlock('en', key, translations.en);
+        insertInBlock('fr', key, translations.fr);
+        insertInBlock('de', key, translations.de);
+      }
 
       fs.writeFileSync(i18nPath, content, 'utf8');
-      this.logger.log(`✅ i18n.js actualizado con éxito: "${key}"`);
+      this.logger.log(`✅ i18n.js actualizado con éxito (${batch.length} entradas)`);
     } catch (error) {
-      this.logger.error('Error actualizando i18n.js:', error);
+      this.logger.error('Error actualizando i18n.js en batch:', error);
     }
+  }
+
+  async addTranslationsToFile(key: string, translations: { es: string, en: string, fr: string, de: string }): Promise<void> {
+    return this.addBatchTranslationsToFile([{ key, translations }]);
   }
 }
