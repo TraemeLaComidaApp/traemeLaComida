@@ -5,6 +5,9 @@ import LanguageDetector from 'i18next-browser-languagedetector';
 const resources = {
   es: {
     translation: {
+      "Café sólo": "Café sólo",
+      "Café con leche": "Café con leche",
+      "Tostada de huevos rotos con jamón": "Tostada de huevos rotos con jamón",
       "Confirm_voz_pedido": "¿Quieres añadir {{item}} al carrito?",
       "Pedido_por_voz": "Pedido por voz",
       "Pedido_realizado": "¡Pedido realizado!",
@@ -123,6 +126,9 @@ const resources = {
   },
   en: {
     translation: {
+      "Café sólo": "Espresso",
+      "Café con leche": "Coffee with milk",
+      "Tostada de huevos rotos con jamón": "Toast with broken eggs and ham",
       "Confirm_voz_pedido": "Do you want to add {{item}} to the cart?",
       "Pedido_por_voz": "Voice order",
       "Pedido_realizado": "Order placed!",
@@ -241,6 +247,9 @@ const resources = {
   },
   fr: {
     translation: {
+      "Café sólo": "Café noir",
+      "Café con leche": "Café au lait",
+      "Tostada de huevos rotos con jamón": "Tartine d'œufs cassés au jambon",
       "Confirm_voz_pedido": "Voulez-vous ajouter {{item}} au panier ?",
       "Pedido_por_voz": "Commande vocale",
       "Pedido_realizado": "Commande passée !",
@@ -359,6 +368,9 @@ const resources = {
   },
   de: {
     translation: {
+      "Café sólo": "Schwarzer Kaffee",
+      "Café con leche": "Milchkaffee",
+      "Tostada de huevos rotos con jamón": "Toast mit Spiegeleiern und Schinken",
       "Confirm_voz_pedido": "Möchten Sie {{item}} zum Warenkorb hinzufügen?",
       "Pedido_por_voz": "Sprachbestellung",
       "Pedido_realizado": "Bestellung aufgegeben!",

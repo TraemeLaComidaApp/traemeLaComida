@@ -84,9 +84,46 @@ export const getMenuCliente = async () => {
 };
 
 export const guardarMenuCompletoAdmin = async (categoriasConfig) => {
-    const dbCatOpciones = await fetchApi('/categoria-opcion') || [];
-    const dbOpciones = await fetchApi('/opcion') || [];
+    // 1. OBTENER ESTADO ACTUAL PARA DIFFING
+    const [dbCategorias, dbProductos, dbCatOpciones, dbOpciones] = await Promise.all([
+        fetchApi('/categoria-producto') || [],
+        fetchApi('/producto') || [],
+        fetchApi('/categoria-opcion') || [],
+        fetchApi('/opcion') || []
+    ]);
 
+    const idsCatNuevas = new Set(categoriasConfig.filter(c => !isNewItem(c.id)).map(c => Number(c.id)));
+    const idsProdNuevos = new Set();
+    const idsOpcionesNuevas = new Set();
+
+    categoriasConfig.forEach(c => {
+        c.productos.forEach(p => {
+            if (!isNewItem(p.id)) idsProdNuevos.add(Number(p.id));
+            if (p.gruposOpciones) {
+                p.gruposOpciones.forEach(g => {
+                    g.opciones.forEach(o => {
+                        if (!isNewItem(o.id)) idsOpcionesNuevas.add(Number(o.id));
+                    });
+                });
+            }
+        });
+    });
+
+    // 2. BORRADOS FÍSICOS (Items que estaban en DB pero ya no están en el config)
+    // Borrar Productos primero
+    for (const p of dbProductos) {
+        if (!idsProdNuevos.has(Number(p.id))) {
+            await fetchApi(`/producto/${p.id}`, { method: 'DELETE' }).catch(() => {});
+        }
+    }
+    // Borrar Categorías
+    for (const c of dbCategorias) {
+        if (!idsCatNuevas.has(Number(c.id))) {
+            await fetchApi(`/categoria-producto/${c.id}`, { method: 'DELETE' }).catch(() => {});
+        }
+    }
+
+    // 3. PROCESAR GUARDADO (UPSERT)
     for (const cat of categoriasConfig) {
         let catId = cat.id;
 
@@ -96,6 +133,8 @@ export const guardarMenuCompletoAdmin = async (categoriasConfig) => {
                 body: JSON.stringify({ nombre: String(cat.nombre), orden: Number(cat.orden) })
             });
             catId = data?.id || data?.data?.id || (Array.isArray(data) && data[0]?.id);
+            // Traducir categoría nueva
+            if (catId) await fetchApi('/voice/translate-menu', { method: 'POST', body: JSON.stringify({ text: cat.nombre, key: cat.nombre }) }).catch(console.error);
         } else {
             await fetchApi(`/categoria-producto/${cat.id}`, {
                 method: 'PATCH',
@@ -107,6 +146,7 @@ export const guardarMenuCompletoAdmin = async (categoriasConfig) => {
 
         for (const prod of cat.productos) {
             let prodId = prod.id;
+            const isNewProd = isNewItem(prod.id);
 
             if (prod.imagen_url instanceof File || prod.img instanceof File) {
                 const file = (prod.imagen_url instanceof File) ? prod.imagen_url : prod.img;
@@ -119,9 +159,9 @@ export const guardarMenuCompletoAdmin = async (categoriasConfig) => {
                 formData.append('orden', String(Number(prod.orden)));
                 formData.append('imagen', file);
 
-                const endpoint = isNewItem(prod.id) ? '/producto/upload' : `/producto/upload/${prod.id}`;
+                const endpoint = isNewProd ? '/producto/upload' : `/producto/upload/${prod.id}`;
                 const data = await fetchApi(endpoint, {
-                    method: isNewItem(prod.id) ? 'POST' : 'PATCH',
+                    method: isNewProd ? 'POST' : 'PATCH',
                     body: formData
                 });
                 prodId = data?.id || data?.data?.id || (Array.isArray(data) && data[0]?.id);
@@ -136,7 +176,7 @@ export const guardarMenuCompletoAdmin = async (categoriasConfig) => {
                     orden: Number(prod.orden)
                 };
 
-                if (isNewItem(prod.id)) {
+                if (isNewProd) {
                     const data = await fetchApi('/producto', { method: 'POST', body: JSON.stringify(prodPayload) });
                     prodId = data?.id || data?.data?.id || (Array.isArray(data) && data[0]?.id);
                 } else {
@@ -145,7 +185,14 @@ export const guardarMenuCompletoAdmin = async (categoriasConfig) => {
             }
 
             if (!prodId) continue;
+            
+            // Traducir producto nuevo
+            if (isNewProd) {
+                await fetchApi('/voice/translate-menu', { method: 'POST', body: JSON.stringify({ text: prod.nombre, key: prod.nombre }) }).catch(console.error);
+                if (prod.desc) await fetchApi('/voice/translate-menu', { method: 'POST', body: JSON.stringify({ text: prod.desc, key: prod.desc }) }).catch(console.error);
+            }
 
+            // Limpiar relaciones de opciones
             try {
                 const currentRels = await fetchApi(`/producto-categoria-opcion/producto/${prodId}`);
                 if (Array.isArray(currentRels)) {
@@ -165,7 +212,10 @@ export const guardarMenuCompletoAdmin = async (categoriasConfig) => {
                         else {
                             const data = await fetchApi('/categoria-opcion', { method: 'POST', body: JSON.stringify({ nombre: String(grupo.nombre) }) });
                             grupoId = data?.id || data?.data?.id || (Array.isArray(data) && data[0]?.id);
-                            if (grupoId) dbCatOpciones.push({ id: grupoId, nombre: grupo.nombre });
+                            if (grupoId) {
+                                dbCatOpciones.push({ id: grupoId, nombre: grupo.nombre });
+                                await fetchApi('/voice/translate-menu', { method: 'POST', body: JSON.stringify({ text: grupo.nombre, key: grupo.nombre }) }).catch(console.error);
+                            }
                         }
                     } else {
                         await fetchApi(`/categoria-opcion/${grupo.id}`, { method: 'PATCH', body: JSON.stringify({ nombre: String(grupo.nombre) }) });
@@ -176,10 +226,21 @@ export const guardarMenuCompletoAdmin = async (categoriasConfig) => {
                     for (const op of grupo.opciones) {
                         const opPayload = { id_categoria_opcion: Number(grupoId), nombre: String(op.nombre), precio_extra: Number(op.suplemento) || 0 };
                         if (isNewItem(op.id)) {
-                            const data = await fetchApi('/opcion', { method: 'POST', body: JSON.stringify(opPayload) });
-                            const newId = data?.id || (Array.isArray(data) && data[0]?.id);
-                            if (newId) dbOpciones.push({ ...opPayload, id: newId });
+                            // PREVENCIÓN DE DUPLICADOS: Si la opción ya existe por nombre en este grupo, reutilizar
+                            const opExistente = dbOpciones.find(o => o.id_categoria_opcion == grupoId && o.nombre.toLowerCase() === op.nombre.toLowerCase());
+                            if (opExistente) {
+                                idsOpcionesNuevas.add(Number(opExistente.id));
+                            } else {
+                                const data = await fetchApi('/opcion', { method: 'POST', body: JSON.stringify(opPayload) });
+                                const newId = data?.id || (Array.isArray(data) && data[0]?.id);
+                                if (newId) {
+                                    dbOpciones.push({ ...opPayload, id: newId });
+                                    idsOpcionesNuevas.add(Number(newId));
+                                    await fetchApi('/voice/translate-menu', { method: 'POST', body: JSON.stringify({ text: op.nombre, key: op.nombre }) }).catch(console.error);
+                                }
+                            }
                         } else {
+                            idsOpcionesNuevas.add(Number(op.id));
                             await fetchApi(`/opcion/${op.id}`, { method: 'PATCH', body: JSON.stringify(opPayload) });
                         }
                     }
@@ -193,6 +254,13 @@ export const guardarMenuCompletoAdmin = async (categoriasConfig) => {
                     body: JSON.stringify({ id_producto: Number(prodId), id_categoria_opcion: Number(g.id), min_selecciones: Number(g.min), max_selecciones: Number(g.max), orden: idx })
                 });
             }
+        }
+    }
+
+    // 4. LIMPIEZA FINAL DE OPCIONES HUÉRFANAS
+    for (const op of dbOpciones) {
+        if (!idsOpcionesNuevas.has(Number(op.id))) {
+            await fetchApi(`/opcion/${op.id}`, { method: 'DELETE' }).catch(() => {});
         }
     }
 };
