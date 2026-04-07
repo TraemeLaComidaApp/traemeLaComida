@@ -122,9 +122,7 @@ export default function MenuEditor() {
     const manejarImagen = (e) => {
         const archivo = e.target.files[0];
         if (archivo) {
-            const reader = new FileReader();
-            reader.onloadend = () => setEditandoProd({ ...editandoProd, img: reader.result });
-            reader.readAsDataURL(archivo);
+            setEditandoProd({ ...editandoProd, img: archivo, imagen_url: '' });
         }
     };
 
@@ -392,8 +390,8 @@ export default function MenuEditor() {
                                     </button>
                                     {editandoProd.img && (
                                         <div className="preview-mini">
-                                            <img src={editandoProd.img} alt="" />
-                                            <button type="button" onClick={() => setEditandoProd({ ...editandoProd, img: '' })}>×</button>
+                                            <img src={editandoProd.img instanceof File ? URL.createObjectURL(editandoProd.img) : editandoProd.img} alt="" />
+                                            <button type="button" onClick={() => setEditandoProd({ ...editandoProd, img: '', imagen_url: '' })}>×</button>
                                         </div>
                                     )}
                                 </div>

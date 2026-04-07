@@ -125,9 +125,37 @@ const DatosNegocio = ({ nombreActual, alGuardarNombre }) => {
                 <div className="form-group">
                     <label>Logo del Negocio</label>
                     <div className="logo-upload-wrapper">
-                        <div className="logo-preview">
+                        <div className="logo-preview" style={{ position: 'relative' }}>
                             {logo ? (
-                                <img src={logo} alt="Logo preview" />
+                                <>
+                                    <img src={logo} alt="Logo preview" />
+                                    <button 
+                                        type="button"
+                                        onClick={() => {
+                                            setLogo(null);
+                                            setLogoArchivoFisico(null);
+                                        }}
+                                        style={{
+                                            position: 'absolute',
+                                            top: '-8px',
+                                            right: '-8px',
+                                            background: '#ef4444',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '50%',
+                                            width: '24px',
+                                            height: '24px',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: '16px',
+                                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                                        }}
+                                    >
+                                        ×
+                                    </button>
+                                </>
                             ) : (
                                 <span className="material-symbols-outlined">image</span>
                             )}

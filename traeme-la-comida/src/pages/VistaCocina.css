@@ -1,24 +1,22 @@
-/* --- VARIABLES DE COLOR (Tema KDS) --- */
+/* =========================================================
+   1. VARIABLES DE COLOR Y RESET (Adaptadas al resto de la App)
+========================================================= */
 :root {
-    /* Colores de estado más suaves y mates que no cansan la vista */
-    --kds-primary: #34d399;
-    /* Verde esmeralda/menta. Claro pero no fosforito */
+    --kds-primary: var(--primary, #ec9213);
     --kds-danger: #ef4444;
-    /* Rojo alerta estándar, no hiere la vista */
     --kds-caution: #fbbf24;
-    /* Amarillo ámbar cálido */
 
-    /* Fondos oscuros pero no "negro puro" (ayuda a relajar el ojo) */
-    --kds-bg: #0f172a;
-    /* Azul noche profundísimo (casi negro) */
-    --kds-panel: #1e293b;
-    /* Gris oscuro azulado para las tarjetas */
+    --kds-bg: var(--bg-main, #f8f7f6);
+    --kds-panel: #ffffff;
 
-    /* Textos y bordes */
-    --kds-white: #f8fafc;
-    /* Blanco roto, menos agresivo que el blanco puro */
-    --kds-border: #000000;
-    /* Bordes negros para dar profundidad */
+    --kds-white: var(--text-dark, #1a1a1a);
+    --kds-text-muted: #666;
+    --kds-border: var(--border-color, #eee);
+    
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 24px;
 }
 
 /* --- CONTENEDOR PRINCIPAL --- */
@@ -30,8 +28,7 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    /* Evita scrolls dobles feos */
-    font-family: 'Inter', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     box-sizing: border-box;
 }
 
@@ -42,7 +39,7 @@
     align-items: center;
     padding: 15px 40px;
     background-color: var(--kds-panel);
-    border-bottom: 3px solid var(--kds-border);
+    border-bottom: 1px solid var(--kds-border);
     flex-shrink: 0;
 }
 
@@ -60,8 +57,7 @@
 .vcoc-header-left h1 {
     margin: 0;
     font-size: 22px;
-    font-weight: 900;
-    letter-spacing: -1px;
+    font-weight: 800;
     color: var(--kds-white);
 }
 
@@ -71,9 +67,11 @@
 
 .vcoc-station {
     color: var(--kds-primary);
-    font-size: 10px;
-    font-family: 'JetBrains Mono', monospace;
-    opacity: 0.7;
+    font-size: 12px;
+    font-weight: 700;
+    background: var(--primary-soft, #fff7ed);
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
 }
 
 .vcoc-header-right {
@@ -83,14 +81,15 @@
 
 .vcoc-stats {
     text-align: right;
-    border-right: 1px solid #333;
+    border-right: 1px solid var(--kds-border);
     padding-right: 20px;
 }
 
 .stats-label,
 .sync-label {
-    font-size: 10px;
-    color: #555;
+    font-size: 11px;
+    color: var(--kds-text-muted);
+    font-weight: 600;
 }
 
 .sync-label {
@@ -103,14 +102,15 @@
 }
 
 .stats-value.caution {
-    color: var(--kds-caution);
+    color: var(--kds-danger);
 }
 
 .vcoc-sync {
     text-align: center;
-    background-color: #000;
-    padding: 5px 20px;
-    border: 1px solid #222;
+    background-color: var(--primary-soft, #fff7ed);
+    padding: 8px 20px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--kds-primary);
 }
 
 .sync-value {
@@ -131,7 +131,7 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    background-color: #050505;
+    background-color: var(--kds-bg);
     overflow: hidden;
 }
 
@@ -140,29 +140,31 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid #222;
+    border-bottom: 1px solid var(--kds-border);
     flex-shrink: 0;
+    background: #fff;
 }
 
 .vcoc-contentHeader h2 {
     font-size: 18px;
     font-weight: 800;
-    font-style: italic;
-    text-transform: uppercase;
     margin: 0;
+    color: var(--kds-white);
 }
 
 .vcoc-toggle-group {
     display: flex;
-    background-color: #000;
+    background-color: #f1f5f9;
     padding: 4px;
+    border-radius: 50px;
 }
 
 .vcoc-toggle-btn {
-    padding: 10px 20px;
+    padding: 8px 16px;
     background-color: transparent;
-    color: #555;
-    border: 1px solid #333;
+    color: #64748b;
+    border: none;
+    border-radius: 50px;
     font-weight: 800;
     cursor: pointer;
     font-size: 12px;
@@ -171,9 +173,9 @@
 }
 
 .vcoc-toggle-btn.active {
-    background-color: var(--kds-primary);
-    color: #000;
-    border-color: var(--kds-primary);
+    background-color: #fff;
+    color: var(--kds-primary);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
 
 .vcoc-pedidos-container {
@@ -195,9 +197,18 @@
 
 /* --- TARJETAS DE PEDIDO --- */
 .vcoc-card {
-    background-color: #141414;
-    border: 2px solid #222;
+    background-color: #fff;
+    border: 1px solid var(--kds-border);
+    border-radius: var(--radius-lg);
     display: flex;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.vcoc-card:hover {
+    box-shadow: 0 8px 25px rgba(0,0,0,0.06);
+    transform: translateY(-2px);
 }
 
 .vcoc-card.grid {
@@ -210,29 +221,29 @@
 
 .vcoc-card.retraso {
     border-color: var(--kds-danger);
-    box-shadow: 0 0 30px rgba(255, 49, 49, 0.1);
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.15);
 }
 
 .vcoc-card-header {
     padding: 20px;
-    background-color: #1c1c1c;
+    background-color: #f8fafc;
     min-width: 150px;
 }
 
 .vcoc-card.grid .vcoc-card-header {
-    border-bottom: 2px solid var(--kds-border);
+    border-bottom: 1px solid var(--kds-border);
 }
 
 .vcoc-card.list .vcoc-card-header {
-    border-right: 2px solid var(--kds-border);
+    border-right: 1px solid var(--kds-border);
 }
 
 .vcoc-card.retraso .vcoc-card-header {
-    background-color: rgba(255, 49, 49, 0.05);
+    background-color: rgba(239, 68, 68, 0.05);
 }
 
 .vcoc-card-id {
-    font-size: 32px;
+    font-size: 28px;
     font-family: 'JetBrains Mono', monospace;
     font-weight: 900;
     color: var(--kds-white);
@@ -245,13 +256,14 @@
 .vcoc-card-mesa {
     font-size: 14px;
     font-weight: 800;
-    color: #888;
+    color: var(--kds-text-muted);
     margin-top: 5px;
 }
 
 .vcoc-card-tiempo {
-    font-size: 12px;
+    font-size: 13px;
     color: var(--kds-primary);
+    font-weight: 700;
     margin-top: 10px;
 }
 
@@ -268,30 +280,42 @@
     gap: 15px;
     cursor: pointer;
     transition: opacity 0.2s;
+    background: #f8fafc;
+    padding: 12px;
+    border-radius: var(--radius-md);
+    border: 1px solid #e2e8f0;
 }
 
 .vcoc-item.listo {
-    opacity: 0.3;
+    opacity: 0.5;
+    background: #f1f5f9;
 }
 
 .vcoc-checkbox {
-    width: 22px;
-    height: 22px;
-    border: 2px solid var(--kds-primary);
-    background-color: transparent;
+    width: 24px;
+    height: 24px;
+    border: 2px solid #cbd5e1;
+    border-radius: 6px;
+    background-color: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    transition: 0.2s;
+}
+
+.vcoc-item:not(.listo):hover .vcoc-checkbox {
+    border-color: var(--kds-primary);
 }
 
 .vcoc-item.listo .vcoc-checkbox {
     background-color: var(--kds-primary);
+    border-color: var(--kds-primary);
 }
 
 .vcoc-checkbox .material-symbols-outlined {
-    color: #000;
-    font-size: 18px;
+    color: #fff;
+    font-size: 16px;
     font-weight: 900;
 }
 
@@ -300,23 +324,24 @@
 }
 
 .vcoc-item-name {
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 700;
-    text-transform: uppercase;
+    color: var(--kds-white);
 }
 
 .vcoc-item.listo .vcoc-item-name {
     text-decoration: line-through;
+    color: var(--kds-text-muted);
 }
 
 .vcoc-item-nota {
-    color: var(--kds-caution);
-    font-size: 11px;
-    font-weight: 800;
-    background-color: rgba(255, 215, 0, 0.05);
+    color: #854d0e;
+    font-size: 12px;
+    font-weight: 700;
+    background-color: #fef08a;
     padding: 4px 8px;
+    border-radius: 6px;
     margin-top: 5px;
-    border-left: 2px solid var(--kds-caution);
     display: inline-block;
 }
 
@@ -324,19 +349,25 @@
     padding: 15px;
     display: flex;
     align-items: center;
-    background-color: #000;
+    background-color: #fff;
+    border-top: 1px solid var(--kds-border);
 }
 
 .vcoc-btn-completar {
     width: 100%;
-    padding: 15px;
+    padding: 14px;
     background-color: var(--kds-primary);
-    color: #000;
+    color: #fff;
     border: none;
-    font-weight: 900;
+    border-radius: var(--radius-md);
+    font-weight: 800;
     cursor: pointer;
     font-size: 14px;
-    transition: transform 0.1s;
+    transition: transform 0.1s, background-color 0.2s;
+}
+
+.vcoc-btn-completar:hover {
+    filter: brightness(1.1);
 }
 
 .vcoc-btn-completar:active {
@@ -346,23 +377,23 @@
 /* --- BARRA LATERAL (HISTORIAL) --- */
 .vcoc-aside {
     width: 350px;
-    background-color: #0f0f0f;
-    border-left: 4px solid var(--kds-border);
-    /* Lo cambiamos a left para que quede a la derecha visualmente si invertimos, o a la izquierda según orden */
+    background-color: #fff;
+    border-left: 1px solid var(--kds-border);
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
+    box-shadow: -4px 0 15px rgba(0,0,0,0.02);
 }
 
 .vcoc-aside-header {
     padding: 25px;
-    background-color: #1a1a1a;
-    border-bottom: 2px solid var(--kds-border);
+    background-color: #fff;
+    border-bottom: 1px solid var(--kds-border);
 }
 
 .vcoc-aside-header h2 {
-    font-size: 14px;
-    font-weight: 900;
+    font-size: 16px;
+    font-weight: 800;
     margin: 0;
     color: var(--kds-white);
 }
@@ -375,9 +406,13 @@
 
 .vcoc-completado-item {
     padding: 15px;
-    background-color: #111;
+    background-color: #f8fafc;
     border-left: 4px solid var(--kds-primary);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
     margin-bottom: 15px;
+    border-top: 1px solid #f1f5f9;
+    border-right: 1px solid #f1f5f9;
+    border-bottom: 1px solid #f1f5f9;
 }
 
 .vcoc-completado-top {
@@ -388,21 +423,24 @@
 
 .vcoc-completado-top b {
     color: var(--kds-primary);
+    font-weight: 800;
 }
 
 .vcoc-completado-top span {
     font-size: 12px;
+    color: var(--kds-text-muted);
 }
 
 .vcoc-completado-desc {
-    font-size: 11px;
-    color: #666;
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 600;
 }
 
 /* --- FOOTER --- */
 .vcoc-footer {
-    background-color: var(--kds-panel);
-    border-top: 4px solid var(--kds-border);
+    background-color: #fff;
+    border-top: 1px solid var(--kds-border);
     padding: 15px 40px;
     display: flex;
     justify-content: space-between;
@@ -411,9 +449,9 @@
 }
 
 .vcoc-btn-voz {
-    background-color: #000;
-    border: 2px solid var(--kds-caution);
-    color: var(--kds-caution);
+    background-color: #f8fafc;
+    border: 2px solid var(--kds-primary);
+    color: var(--kds-primary);
     padding: 12px 30px;
     border-radius: 50px;
     display: flex;
@@ -421,25 +459,29 @@
     gap: 15px;
     cursor: pointer;
     transition: 0.2s;
+    font-weight: 700;
+}
+
+.vcoc-btn-voz:hover {
+    background-color: var(--primary-soft, #fff7ed);
 }
 
 .vcoc-btn-voz.escuchando {
     border-color: var(--kds-danger);
     color: var(--kds-danger);
-    animation: pulse 1s infinite;
+    background-color: rgba(239, 68, 68, 0.05);
+    animation: pulse 1.5s infinite;
 }
 
 @keyframes pulse {
     0% {
-        box-shadow: 0 0 0 0 rgba(255, 49, 49, 0.4);
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
     }
-
     70% {
-        box-shadow: 0 0 0 15px rgba(255, 49, 49, 0);
+        box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
     }
-
     100% {
-        box-shadow: 0 0 0 0 rgba(255, 49, 49, 0);
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
     }
 }
 
@@ -448,21 +490,21 @@
 }
 
 .voz-title {
-    font-size: 12px;
-    font-weight: 900;
+    font-size: 13px;
+    font-weight: 800;
 }
 
 .voz-subtitle {
-    font-size: 9px;
-    opacity: 0.6;
+    font-size: 11px;
+    color: var(--kds-text-muted);
 }
 
 .vcoc-clock {
     font-family: 'JetBrains Mono', monospace;
     font-size: 24px;
-    color: var(--kds-primary);
+    font-weight: 800;
+    color: var(--kds-white);
 }
-
 
 /* =========================================================
    MEDIA QUERIES - TABLETS Y MÓVILES
@@ -471,12 +513,10 @@
 @media (max-width: 1024px) {
     .vcoc-aside {
         width: 250px;
-        /* Reducimos el panel derecho en tablets */
     }
 
     .vcoc-pedidos-container.grid-view {
         grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        /* Tarjetas más estrechas */
     }
 }
 
@@ -495,23 +535,19 @@
 
     .vcoc-main {
         flex-direction: column;
-        /* Apilamos panel principal y panel de historial */
         overflow-y: auto;
-        /* Dejamos que haga scroll global el contenedor MAIN en vez de independiente */
     }
 
     .vcoc-contentArea,
     .vcoc-aside-list {
         overflow: visible;
-        /* Desactivamos el overflow interno para móviles */
     }
 
     .vcoc-aside {
         width: 100%;
         border-left: none;
-        border-top: 4px solid var(--kds-border);
+        border-top: 1px solid var(--kds-border);
         flex: none;
-        /* Que ocupe lo que tenga que ocupar abajo */
     }
 
     .vcoc-contentHeader {
@@ -527,7 +563,6 @@
 
     .vcoc-toggle-btn {
         flex: 1;
-        /* Botones a mitad y mitad */
     }
 
     .vcoc-pedidos-container {
@@ -536,23 +571,20 @@
 
     .vcoc-pedidos-container.grid-view {
         grid-template-columns: 1fr;
-        /* Forzamos 1 columna en móviles siempre */
     }
 
     .vcoc-card.list {
         flex-direction: column;
-        /* En móvil, la vista lista también se apila */
     }
 
     .vcoc-card.list .vcoc-card-header {
         border-right: none;
-        border-bottom: 2px solid var(--kds-border);
+        border-bottom: 1px solid var(--kds-border);
     }
 
     .vcoc-footer {
         padding: 15px 20px;
         flex-direction: column-reverse;
-        /* Reloj arriba, botón abajo */
         gap: 15px;
     }
 
@@ -573,18 +605,18 @@
     align-items: center;
     justify-content: center;
     background-color: var(--kds-bg);
-    /* Fondo oscuro */
-    font-family: 'Inter', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     color: var(--kds-white);
 }
 
 .vcoc-login-box {
-    background-color: var(--kds-panel);
+    background-color: #fff;
     width: 100%;
     max-width: 420px;
     padding: 40px;
-    border: 3px solid var(--kds-border);
-    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--kds-border);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
     box-sizing: border-box;
 }
 
@@ -597,20 +629,21 @@
     font-size: 50px;
     color: var(--kds-primary);
     margin-bottom: 10px;
+    background: var(--primary-soft, #fff7ed);
+    padding: 15px;
+    border-radius: 50%;
 }
 
 .vcoc-login-header h2 {
     margin: 0 0 5px 0;
     font-size: 24px;
-    font-weight: 900;
-    letter-spacing: -1px;
+    font-weight: 800;
 }
 
 .vcoc-login-header p {
     margin: 0;
-    font-size: 11px;
-    color: var(--kds-caution);
-    letter-spacing: 1px;
+    font-size: 13px;
+    color: var(--kds-text-muted);
 }
 
 .vcoc-login-form .form-group {
@@ -621,7 +654,7 @@
     display: block;
     font-size: 12px;
     font-weight: 800;
-    color: #888;
+    color: #64748b;
     margin-bottom: 8px;
     text-transform: uppercase;
 }
@@ -629,11 +662,12 @@
 .vcoc-login-form input {
     width: 100%;
     padding: 15px;
-    background-color: #050505;
-    border: 2px solid #333;
+    background-color: #fff;
+    border: 2px solid #cbd5e1;
+    border-radius: var(--radius-md);
     color: var(--kds-white);
-    font-size: 16px;
     font-family: 'JetBrains Mono', monospace;
+    font-size: 16px;
     box-sizing: border-box;
     transition: 0.2s;
 }
@@ -641,30 +675,36 @@
 .vcoc-login-form input:focus {
     outline: none;
     border-color: var(--kds-primary);
-    box-shadow: 0 0 10px rgba(52, 211, 153, 0.2);
+    box-shadow: 0 0 0 3px var(--primary-soft, rgba(52, 211, 153, 0.2));
 }
 
 .vcoc-login-error {
     background-color: rgba(239, 68, 68, 0.1);
     color: var(--kds-danger);
     padding: 12px;
-    border-left: 4px solid var(--kds-danger);
+    border-radius: var(--radius-md);
     font-size: 12px;
     font-weight: 800;
     text-align: center;
     margin-bottom: 25px;
+    border: 1px solid #fca5a5;
 }
 
 .vcoc-btn-login {
     width: 100%;
     padding: 16px;
     background-color: var(--kds-primary);
-    color: #000;
+    color: #fff;
     border: none;
-    font-size: 14px;
-    font-weight: 900;
+    border-radius: var(--radius-md);
+    font-size: 15px;
+    font-weight: 800;
     cursor: pointer;
-    transition: transform 0.1s;
+    transition: transform 0.1s, background-color 0.2s;
+}
+
+.vcoc-btn-login:hover {
+    filter: brightness(1.1);
 }
 
 .vcoc-btn-login:active {
@@ -673,8 +713,8 @@
 
 /* Botón de Logout en el Header del KDS */
 .vcoc-btn-logout {
-    background-color: #000;
-    border: 2px solid #333;
+    background-color: #fff;
+    border: 1px solid #e2e8f0;
     color: var(--kds-danger);
     width: 40px;
     height: 40px;
@@ -685,9 +725,10 @@
     cursor: pointer;
     margin-left: 20px;
     transition: 0.2s;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.02);
 }
 
 .vcoc-btn-logout:hover {
-    border-color: var(--kds-danger);
-    background-color: rgba(239, 68, 68, 0.1);
+    border-color: #fca5a5;
+    background-color: rgba(239, 68, 68, 0.05);
 }

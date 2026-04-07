@@ -68,7 +68,7 @@ export class ConfiguracionLocalService {
   }
 
   // --- NUEVA FUNCIÓN: Maneja la subida del archivo a Supabase Storage y actualiza/crea en BD ---
-  async upsertWithLogo(id: number | null, nombre_local: string, file: Express.Multer.File) {
+  async upsertWithLogo(id: number | null, body: any, file: Express.Multer.File) {
     const supabase = this.supabaseService.getClient();
     let logo_url = undefined;
 
@@ -98,8 +98,7 @@ export class ConfiguracionLocalService {
     }
 
     // 3. PREPARAMOS LOS DATOS PARA LA BASE DE DATOS
-    const payload: any = {};
-    if (nombre_local) payload.nombre_local = nombre_local;
+    const payload: any = { ...body };
     if (logo_url) payload.logo_url = logo_url;
 
     // 4. GUARDAMOS EN BASE DE DATOS (Actualizar si hay ID, Insertar si no hay ID)

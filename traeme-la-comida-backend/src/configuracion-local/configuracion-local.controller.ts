@@ -26,16 +26,18 @@ export class ConfiguracionLocalController {
       type: 'object',
       properties: {
         nombre_local: { type: 'string' },
+        color_primario: { type: 'string' },
+        link_resenas_google: { type: 'string' },
         logo: { type: 'string', format: 'binary' },
       },
     },
   })
   @UseInterceptors(FileInterceptor('logo'))
   createWithLogo(
-    @Body() body: { nombre_local: string },
+    @Body() body: any,
     @UploadedFile() file: Express.Multer.File,
   ) {
-    return this.service.upsertWithLogo(null, body.nombre_local, file);
+    return this.service.upsertWithLogo(null, body, file);
   }
 
   @Get()
@@ -65,6 +67,8 @@ export class ConfiguracionLocalController {
       type: 'object',
       properties: {
         nombre_local: { type: 'string' },
+        color_primario: { type: 'string' },
+        link_resenas_google: { type: 'string' },
         logo: { type: 'string', format: 'binary' },
       },
     },
@@ -72,10 +76,10 @@ export class ConfiguracionLocalController {
   @UseInterceptors(FileInterceptor('logo'))
   updateWithLogo(
     @Param('id') id: string,
-    @Body() body: { nombre_local: string },
+    @Body() body: any,
     @UploadedFile() file: Express.Multer.File,
   ) {
-    return this.service.upsertWithLogo(+id, body.nombre_local, file);
+    return this.service.upsertWithLogo(+id, body, file);
   }
 
   @Delete(':id')
