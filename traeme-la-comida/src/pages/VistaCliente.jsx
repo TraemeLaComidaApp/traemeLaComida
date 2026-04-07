@@ -48,6 +48,7 @@ const VistaCliente = () => {
 
     const [estadoVoz, setEstadoVoz] = useState(null);
     const [mensajeVoz, setMensajeVoz] = useState("");
+    const [busqueda, setBusqueda] = useState("");
 
     const [configNegocio, setConfigNegocio] = useState({ nombre_local: 'Cargando...', logo_url: null });
 
@@ -143,6 +144,15 @@ const VistaCliente = () => {
         const statusInterval = setInterval(hydrateAndPollStatus, 5000);
         return () => clearInterval(statusInterval);
     }, [mesa]);
+
+    const normalizarTexto = (texto) => {
+        if (!texto) return "";
+        return texto
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "") // Eliminar acentos
+            .replace(/\s+/g, ""); // Eliminar espacios
+    };
 
     const categoriasTabs = ['Todo', ...menuData.map(c => c.nombre)];
 
@@ -615,12 +625,19 @@ const VistaCliente = () => {
                 {seccionActiva === 'menu' ? (
                     <div className="vc-page-content">
                         <section className="vc-banner">
-                            <div className="vc-banner-text">
+                            <div className="vc-banner-text" style={{ flex: 1 }}>
                                 <h1>{t('Empieza_manana')}</h1>
                                 <p>{t('Empieza_manana_desc')}</p>
-                                <button className="vc-btn-voz" onClick={iniciarEscuchaVoz}>
-                                    <span className="material-symbols-outlined">mic</span> {t('Pedir_voz')}
-                                </button>
+                                <div className="vc-search-container">
+                                    <span className="material-symbols-outlined vc-search-icon">search</span>
+                                    <input
+                                        type="text"
+                                        placeholder={t('Buscar_platos', 'Buscar platos...')}
+                                        className="vc-search-input"
+                                        value={busqueda}
+                                        onChange={(e) => setBusqueda(e.target.value)}
+                                    />
+                                </div>
                             </div>
                             <div className="vc-banner-img"></div>
                         </section>
@@ -638,9 +655,37 @@ const VistaCliente = () => {
                         </div>
 
                         <div className="vc-product-list">
-                            {menuData
-                                .filter(cat => filtroActivo === 'Todo' || cat.nombre === filtroActivo)
-                                .map(cat => cat.productos.map(prod => (
+                            {(() => {
+                                const productosFiltrados = menuData
+                                    .filter(cat => filtroActivo === 'Todo' || cat.nombre === filtroActivo)
+                                    .flatMap(cat => cat.productos
+                                        .filter(prod => {
+                                            const queryNormalizada = normalizarTexto(busqueda);
+                                            if (!queryNormalizada) return true;
+
+                                            const nombreOriginalNorm = normalizarTexto(prod.nombre);
+                                            const nombreTradNorm = normalizarTexto(t(prod.nombre));
+                                            const descOriginalNorm = normalizarTexto(prod.desc || "");
+                                            const descTradNorm = normalizarTexto(t(prod.desc || ""));
+
+                                            return nombreOriginalNorm.includes(queryNormalizada) || 
+                                                   nombreTradNorm.includes(queryNormalizada) ||
+                                                   descOriginalNorm.includes(queryNormalizada) ||
+                                                   descTradNorm.includes(queryNormalizada);
+                                        })
+                                        .map(prod => ({ prod, cat }))
+                                    );
+
+                                if (productosFiltrados.length === 0) {
+                                    return (
+                                        <div className="vc-no-results">
+                                            <span className="material-symbols-outlined">search_off</span>
+                                            <p>{t('No_resultados_busqueda', 'No hemos encontrado platos que coincidan')}</p>
+                                        </div>
+                                    );
+                                }
+
+                                return productosFiltrados.map(({ prod, cat }) => (
                                     <div key={prod.id} className="vc-card" onClick={() => abrirModalProducto(prod, cat)}>
                                         {prod.img && prod.img !== "" && <img src={prod.img} className="vc-card-img" alt={prod.nombre} />}
                                         <div className="vc-card-info">
@@ -656,7 +701,8 @@ const VistaCliente = () => {
                                             </div>
                                         </div>
                                     </div>
-                                )))}
+                                ));
+                            })()}
                         </div>
                     </div>
                 ) : (
@@ -851,13 +897,23 @@ const VistaCliente = () => {
 
                 {seccionActiva === 'menu' && (
                     <div className="vc-footer-actions">
-                        <button
-                            className={`vc-btn-camarero ${camareroLlamado ? 'llamado' : ''}`}
-                            onClick={llamarAlCamarero}
-                        >
-                            <span className="material-symbols-outlined">{camareroLlamado ? 'done' : 'notifications'}</span>
-                            {camareroLlamado ? t('Camarero_llamado') : t('Llamar_camarero')}
-                        </button>
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                            <button
+                                className={`vc-btn-camarero ${camareroLlamado ? 'llamado' : ''}`}
+                                onClick={llamarAlCamarero}
+                                style={{ flex: 1, padding: '12px 5px', fontSize: '14px' }}
+                            >
+                                <span className="material-symbols-outlined">{camareroLlamado ? 'done' : 'notifications'}</span>
+                                {camareroLlamado ? t('Camarero_llamado') : t('Llamar_camarero')}
+                            </button>
+                            <button 
+                                className="vc-btn-voz" 
+                                onClick={iniciarEscuchaVoz}
+                                style={{ flex: 1, marginTop: 0, justifyContent: 'center', padding: '12px 5px', fontSize: '14px' }}
+                            >
+                                <span className="material-symbols-outlined">mic</span> {t('Pedir_voz')}
+                            </button>
+                        </div>
                         {carrito.length > 0 && (
                             <button className="vc-btn-carrito" onClick={() => setSeccionActiva('pedido')}>
                                 <span className="material-symbols-outlined">shopping_basket</span>

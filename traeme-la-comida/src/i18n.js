@@ -126,7 +126,9 @@ const resources = {
       "Confirm_pago_digital_barra": "¿Confirmas el pago de {{total}}€ vía {{metodo}}? Al confirmar, tu pedido se enviará a cocina.",
       "Confirm_pago_fisico_barra": "¿Confirmas que vas a pagar {{total}}€ en {{metodo}} en la caja? Al confirmar, tu pedido se enviará a cocina.",
       "Error_id_barra": "No se ha podido identificar el ID de la barra en el sistema. Asegúrate de tener al menos una creada en el MapaEditor.",
-      "Algo_salio_mal": "Uy. Algo salió mal creando tú pedido."
+      "Algo_salio_mal": "Uy. Algo salió mal creando tú pedido.",
+      "Buscar_platos": "Buscar platos...",
+      "No_resultados_busqueda": "No hemos encontrado platos que coincidan"
     }
   },
   en: {
@@ -252,7 +254,9 @@ const resources = {
       "Confirm_pago_digital_barra": "Do you confirm the payment of {{total}}€ via {{metodo}}? Upon confirmation, your order will be sent to the kitchen.",
       "Confirm_pago_fisico_barra": "Do you confirm that you're paying {{total}}€ in {{metodo}} at the counter? Upon confirmation, your order will be sent to the kitchen.",
       "Error_id_barra": "Could not identify the bar ID. Ensure you have at least one created in the Map Editor.",
-      "Algo_salio_mal": "Oops. Something went wrong creating your order."
+      "Algo_salio_mal": "Oops. Something went wrong creating your order.",
+      "Buscar_platos": "Search dishes...",
+      "No_resultados_busqueda": "We couldn't find any matching dishes"
     }
   },
   fr: {
@@ -378,7 +382,9 @@ const resources = {
        "Confirm_pago_digital_barra": "Confirmez-vous le paiement de {{total}}€ via {{metodo}} ? Une fois confirmé, votre commande sera envoyée en cuisine.",
        "Confirm_pago_fisico_barra": "Confirmez-vous que vous paierez {{total}}€ en {{metodo}} à la caisse ? Une fois confirmé, votre commande sera envoyée en cuisine.",
       "Error_id_barra": "Impossible d'identifier l'ID du bar. Assurez-vous d'en avoir au moins un de créé dans l'éditeur.",
-      "Algo_salio_mal": "Oups. Quelque chose a mal tourné lors de la création de la commande."
+      "Algo_salio_mal": "Oups. Quelque chose a mal tourné lors de la création de la commande.",
+      "Buscar_platos": "Rechercher des plats...",
+      "No_resultados_busqueda": "Nous n'avons trouvé aucun plat correspondant"
     }
   },
   de: {
@@ -504,7 +510,9 @@ const resources = {
        "Confirm_pago_digital_barra": "Bestätigen Sie die Zahlung von {{total}}€ über {{metodo}}? Nach der Bestätigung wird Ihre Bestellung an die Küche gesendet.",
        "Confirm_pago_fisico_barra": "Bestätigen Sie, dass Sie {{total}}€ in {{metodo}} an der Kasse bezahlen? Nach der Bestätigung wird Ihre Bestellung an die Küche gesendet.",
       "Error_id_barra": "Die Bar-ID konnte nicht identifiziert werden. Stellen Sie sicher, dass mindestens eine erstellt wurde.",
-      "Algo_salio_mal": "Hoppla. Bei der Erstellung Ihrer Bestellung ist etwas schief gelaufen."
+      "Algo_salio_mal": "Hoppla. Bei der Erstellung Ihrer Bestellung ist etwas schief gelaufen.",
+      "Buscar_platos": "Gerichte suchen...",
+      "No_resultados_busqueda": "Wir konnten keine passenden Gerichte finden"
     }
   }
 };
