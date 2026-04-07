@@ -331,7 +331,7 @@ const VistaCocina = () => {
                         ) : pedidos.length === 0 ? (
                             <div style={{ padding: '20px', color: '#888' }}>No hay pedidos en curso. Buen trabajo.</div>
                         ) : (
-                            pedidos.filter(p => p.items.some(i => i.estado !== 'listo')).map(p => {
+                            pedidos.filter(p => p.items.some(i => i.estado !== 'listo' && i.estado !== 'servido')).map(p => {
                                 // Determinamos retraso simple (> 10 mins)
                                 const minsTranscurridos = (new Date() - p.fecha) / 60000;
                                 const retraso = minsTranscurridos > 10;
@@ -345,8 +345,8 @@ const VistaCocina = () => {
                                         </div>
 
                                         <div className="vcoc-card-items">
-                                            {/* En la tarjeta solo mostramos lo que NO esté listo */}
-                                            {p.items.filter(i => i.estado !== 'listo').map((item, idx) => (
+                                            {/* En la tarjeta solo mostramos lo que NO esté listo ni servido */}
+                                            {p.items.filter(i => i.estado !== 'listo' && i.estado !== 'servido').map((item, idx) => (
                                                 <div key={item.idDetalle} onClick={() => toggleItem(p.idPedido, idx)} className={`vcoc-item vcoc-estado-${item.estado}`}>
                                                     <div className="vcoc-checkbox">
                                                         {item.estado === 'listo' && <span className="material-symbols-outlined">check</span>}

@@ -115,8 +115,8 @@ const resources = {
       "Anadir_carrito_btn": "Añadir al carrito • {{precio}}€",
       "Completa_opciones": "Completa las opciones requeridas",
       "max_opciones_alert": "Solo puedes seleccionar un máximo de {{max}} opciones.",
-      "Confirm_pago_digital_barra": "¿Deseas confirmar el pago con {{metodo}} y mandar tu pedido a barra?",
-      "Confirm_pago_fisico_barra": "¿Avisar al personal para realizar el pago en barra con {{metodo}}?",
+      "Confirm_pago_digital_barra": "¿Confirmas el pago de {{total}}€ vía {{metodo}}? Al confirmar, tu pedido se enviará a cocina.",
+      "Confirm_pago_fisico_barra": "¿Confirmas que vas a pagar {{total}}€ en {{metodo}} en la caja? Al confirmar, tu pedido se enviará a cocina.",
       "Error_id_barra": "No se ha podido identificar el ID de la barra en el sistema. Asegúrate de tener al menos una creada en el MapaEditor.",
       "Algo_salio_mal": "Uy. Algo salió mal creando tú pedido."
     }
@@ -233,8 +233,8 @@ const resources = {
       "Anadir_carrito_btn": "Add to cart • {{precio}}€",
       "Completa_opciones": "Complete required options",
       "max_opciones_alert": "You can only select a maximum of {{max}} options.",
-      "Confirm_pago_digital_barra": "Do you want to confirm the payment with {{metodo}} and send your order to the bar?",
-      "Confirm_pago_fisico_barra": "Notify staff to pay at the bar with {{metodo}}?",
+      "Confirm_pago_digital_barra": "Do you confirm the payment of {{total}}€ via {{metodo}}? Upon confirmation, your order will be sent to the kitchen.",
+      "Confirm_pago_fisico_barra": "Do you confirm that you're paying {{total}}€ in {{metodo}} at the counter? Upon confirmation, your order will be sent to the kitchen.",
       "Error_id_barra": "Could not identify the bar ID. Ensure you have at least one created in the Map Editor.",
       "Algo_salio_mal": "Oops. Something went wrong creating your order."
     }
@@ -351,8 +351,8 @@ const resources = {
       "Anadir_carrito_btn": "Ajouter au panier • {{precio}}€",
       "Completa_opciones": "Complétez les options requises",
       "max_opciones_alert": "Vous ne pouvez sélectionner qu'un maximum de {{max}} options.",
-      "Confirm_pago_digital_barra": "Voulez-vous confirmer le paiement avec {{metodo}} et envoyer la commande au bar ?",
-      "Confirm_pago_fisico_barra": "Avertir le personnel pour payer au bar avec {{metodo}} ?",
+       "Confirm_pago_digital_barra": "Confirmez-vous le paiement de {{total}}€ via {{metodo}} ? Une fois confirmé, votre commande sera envoyée en cuisine.",
+       "Confirm_pago_fisico_barra": "Confirmez-vous que vous paierez {{total}}€ en {{metodo}} à la caisse ? Une fois confirmé, votre commande sera envoyée en cuisine.",
       "Error_id_barra": "Impossible d'identifier l'ID du bar. Assurez-vous d'en avoir au moins un de créé dans l'éditeur.",
       "Algo_salio_mal": "Oups. Quelque chose a mal tourné lors de la création de la commande."
     }
@@ -469,8 +469,8 @@ const resources = {
       "Anadir_carrito_btn": "In den Warenkorb • {{precio}}€",
       "Completa_opciones": "Schließen Sie die erforderlichen Optionen ab",
       "max_opciones_alert": "Sie können maximal {{max}} Optionen auswählen.",
-      "Confirm_pago_digital_barra": "Möchten Sie die Zahlung mit {{metodo}} bestätigen und an die Bar senden?",
-      "Confirm_pago_fisico_barra": "Personal benachrichtigen, um an der Bar mit {{metodo}} zu bezahlen?",
+       "Confirm_pago_digital_barra": "Bestätigen Sie die Zahlung von {{total}}€ über {{metodo}}? Nach der Bestätigung wird Ihre Bestellung an die Küche gesendet.",
+       "Confirm_pago_fisico_barra": "Bestätigen Sie, dass Sie {{total}}€ in {{metodo}} an der Kasse bezahlen? Nach der Bestätigung wird Ihre Bestellung an die Küche gesendet.",
       "Error_id_barra": "Die Bar-ID konnte nicht identifiziert werden. Stellen Sie sicher, dass mindestens eine erstellt wurde.",
       "Algo_salio_mal": "Hoppla. Bei der Erstellung Ihrer Bestellung ist etwas schief gelaufen."
     }

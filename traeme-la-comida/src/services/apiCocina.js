@@ -35,7 +35,7 @@ export const getPedidosPendientesCocina = async () => {
                 if (p.es_barra) {
                     return d.estado === 'pagado' || d.estado === 'preparando' || d.estado === 'listo';
                 } else {
-                    return d.estado === 'no_servido' || d.estado === 'preparando' || d.estado === 'listo';
+                    return d.estado === 'no_servido' || d.estado === 'preparando' || d.estado === 'listo' || d.estado === 'pagado' || d.estado === 'solicitado_mesa';
                 }
             });
             

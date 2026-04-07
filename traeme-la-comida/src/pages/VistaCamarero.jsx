@@ -120,7 +120,12 @@ export default function VistaCamarero() {
         // 1. Identificar qué productos vamos a cobrar ahora
         // Si hay items con solicitud explícita, cobramos solo esos. Si no, cobramos todo lo pendiente.
         const itemsSolicitados = mesa.pedido.filter(i => i.estadoItem === 'solicitado_mesa');
-        const itemsACobrar = itemsSolicitados.length > 0 ? itemsSolicitados : mesa.pedido.filter(i => i.estadoItem !== 'pagado');
+        const itemsACobrar = itemsSolicitados.length > 0 ? itemsSolicitados : mesa.pedido.filter(i => {
+            if (mesa.tipoPedido === 'barra') {
+                return i.estadoItem === 'solicitado_mesa' || i.estadoItem === 'no_servido';
+            }
+            return i.estadoItem !== 'pagado';
+        });
 
         if (itemsACobrar.length === 0) {
             alert("No hay productos pendientes de cobro.");
@@ -327,7 +332,7 @@ export default function VistaCamarero() {
                     </div>
 
                     <div className="lista-comanda">
-                        {mesaActiva.pedido.map((item, idx) => (
+                        {mesaActiva.pedido.filter(item => item.estadoItem !== 'servido' && item.estadoItem !== 'pagado').map((item, idx) => (
                             <div key={idx} className={`comanda-item estado-${item.estadoItem}`}>
                                 <div className="info-prod">
                                     {mesaActiva.tipoPedido === 'barra' && item.numeroPedido && (
@@ -337,6 +342,7 @@ export default function VistaCamarero() {
                                     <span className="nom" style={{ display: 'flex', flexDirection: 'column' }}>
                                         <span>
                                             {item.nombre}
+                                            {mesaActiva.tipoPedido === 'barra' && (item.estadoItem === 'listo' || item.estadoItem === 'preparando') && <small style={{ color: '#34a853', marginLeft: '5px', fontWeight: 'bold' }}>PAGADO</small>}
                                             {item.estadoItem === 'listo' && <small className="tag-listo">LISTO</small>}
                                             {item.estadoItem === 'no_servido' && <small className="tag-prep">En prep...</small>}
                                         </span>
@@ -381,7 +387,12 @@ export default function VistaCamarero() {
                     <div className="panel-footer">
                         <div className="total-box">
                             <span>TOTAL</span>
-                            <span>{mesaActiva.pedido.reduce((t, i) => t + (i.precio * i.cantidad), 0).toFixed(2)}€</span>
+                            <span>{mesaActiva.pedido.filter(i => {
+                                if (mesaActiva.tipoPedido === 'barra') {
+                                    return i.estadoItem === 'solicitado_mesa' || i.estadoItem === 'no_servido';
+                                }
+                                return i.estadoItem !== 'pagado';
+                            }).reduce((t, i) => t + (i.precio * i.cantidad), 0).toFixed(2)}€</span>
                         </div>
 
                         <div className="acciones-mesa">

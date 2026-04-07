@@ -8,7 +8,8 @@ import {
     getDetallesPedido,
     registrarPago,
     actualizarEstadoDetalle,
-    solicitarPago as solicitarPagoApi
+    solicitarPago as solicitarPagoApi,
+    finalizarPedido
 } from '../services/apiCliente';
 import { fetchApi } from '../services/apiClient';
 import { getConfiguracionLocal } from '../services/apiAuth';
@@ -45,23 +46,36 @@ const VistaBarra = () => {
     const [configNegocio, setConfigNegocio] = useState({ nombre_local: 'Cargando...', logo_url: null });
 
     useEffect(() => {
+        let resolveInterval;
         const resolveBarra = async () => {
             try {
                 if (uuid) {
                     const data = await getMesaByUuid(uuid);
                     const mesaValida = Array.isArray(data) ? data[0] : (data.data || data);
-                    if (mesaValida && mesaValida.id) setIdMesaBarra(mesaValida.id);
+                    if (mesaValida && mesaValida.id) {
+                        setIdMesaBarra(mesaValida.id);
+                        if (resolveInterval) clearInterval(resolveInterval);
+                    }
                 } else {
                     const mesas = await fetchApi('/mesa') || [];
                     const primerBarra = mesas.find(m => m.tipo === 'barra');
-                    if (primerBarra) setIdMesaBarra(primerBarra.id);
-                    else if (mesas.length > 0) setIdMesaBarra(mesas[0].id);
+                    if (primerBarra) {
+                        setIdMesaBarra(primerBarra.id);
+                        if (resolveInterval) clearInterval(resolveInterval);
+                    }
+                    else if (mesas.length > 0) {
+                        setIdMesaBarra(mesas[0].id);
+                        if (resolveInterval) clearInterval(resolveInterval);
+                    }
                 }
             } catch (error) {
-                console.error("Error resolviendo la barra:", error);
+                console.error("Error resolviendo la barra (reintentando en 3s):", error);
             }
         };
         resolveBarra();
+        resolveInterval = setInterval(() => {
+            if (!idMesaBarra) resolveBarra();
+        }, 3000);
 
         const fetchMenu = async () => {
             try {
@@ -84,7 +98,10 @@ const VistaBarra = () => {
         };
         fetchConfig();
 
-        return () => clearInterval(menuInterval);
+        return () => {
+            clearInterval(menuInterval);
+            if (resolveInterval) clearInterval(resolveInterval);
+        };
     }, []);
 
     // HYDRATION & POLLING FOR BARRA
@@ -118,25 +135,50 @@ const VistaBarra = () => {
                 // Si hay pedido, hidratamos
                 const detalles = await getDetallesPedido(pedido.id);
                 if (detalles && detalles.length > 0) {
-                    const newCarrito = detalles.map(det => ({
-                        producto: { id: det.id_producto, nombre: det.producto?.nombre || 'Producto', precio: det.precio_unitario },
-                        nombre: det.producto?.nombre || 'Producto',
-                        precioFinal: det.precio_unitario,
-                        extrasAplicados: det.seleccionesOpciones?.map(sel => ({
-                            opcionSeleccionada: { id: sel.id_opcion, nombre: sel.opcion?.nombre || '', suplemento: sel.precio_extra_aplicado }
-                        })) || [],
-                        nota: det.notas,
-                        enviado: true,
-                        estadoPago: det.estado === 'pagado' ? 'pagado' : (det.estado === 'solicitado_mesa' ? 'solicitado_mesa' : null),
-                        estado: det.estado
-                    }));
+                    const newCarrito = detalles
+                        .filter(det => det.estado !== 'servido') // HIDE SERVED ITEMS
+                        .map(det => ({
+                            producto: { id: det.id_producto, nombre: det.producto?.nombre || 'Producto', precio: det.precio_unitario },
+                            nombre: det.producto?.nombre || 'Producto',
+                            precioFinal: det.precio_unitario,
+                            extrasAplicados: det.seleccionesOpciones?.map(sel => ({
+                                opcionSeleccionada: { id: sel.id_opcion, nombre: sel.opcion?.nombre || '', suplemento: sel.precio_extra_aplicado }
+                            })) || [],
+                            nota: det.notas,
+                            enviado: true,
+                            estadoPago: (det.estado === 'pagado' || det.estado === 'listo' || det.estado === 'preparando' || det.estado === 'servido') ? 'pagado' : (det.estado === 'solicitado_mesa' ? 'solicitado_mesa' : null),
+                            estado: det.estado
+                        }));
                     // MERGE LOGIC: Keep local items (not sent) and replace sent items with fresh DB state
                     setCarrito(prev => {
                         const localItems = prev.filter(item => !item.enviado);
-                        return [...localItems, ...newCarrito];
+                        const merged = [...localItems, ...newCarrito];
+
+                        // AUTO-CLOSE & RESET: Si ya no quedan items por servir, y todo lo enviado está pagado
+                        const hasUnpaid = detalles.some(det => det.estado !== 'pagado' && det.estado !== 'listo' && det.estado !== 'preparando' && det.estado !== 'servido');
+                        const allServed = detalles.every(det => det.estado === 'servido');
+
+                        if (detalles.length > 0 && allServed && !hasUnpaid && localItems.length === 0) {
+                             // Cerramos el pedido automáticamente para limpiar la mesa para el siguiente cliente
+                             finalizarPedido(pedido.id, null).catch(console.error);
+                             setPagoSolicitado(false);
+                             setEsperandoCobro(false);
+                             // NO quitamos el número de pedido aquí, dejamos que el usuario lo vea hasta que lo borre él
+                             return [];
+                        }
+
+                        // Si el pedido se cerró externamente, limpiamos
+                        if (pedido.estado === 'cerrado' && merged.length === 0) {
+                            setPagoSolicitado(false);
+                            setEsperandoCobro(false);
+                            setNumeroPedido(null);
+                        }
+
+                        return merged;
                     });
-                    if (pedido.estado === 'pendiente_cobro') setEsperandoCobro(true);
-                    if (pedido.estado === 'cerrado') setPagoSolicitado(true);
+
+                    if (pedido.estado === 'pendiente_cobro' && totalPendientePago > 0) setEsperandoCobro(true);
+                    if (pedido.estado === 'cerrado' && totalPendientePago > 0) setPagoSolicitado(true);
                 }
             } catch (err) {
                 console.error("Error polling barra status:", err);
@@ -233,7 +275,11 @@ const VistaBarra = () => {
     };
 
     const gestionarPago = async (metodo) => {
-        if (carrito.length === 0) return;
+        const itemsToPay = carrito.filter(item => item.estadoPago !== 'pagado');
+        if (itemsToPay.length === 0) return;
+
+        const itemsPorEnviar = itemsToPay.filter(item => !item.enviado);
+        if (itemsPorEnviar.length === 0) return;
 
         // Mapeo a strings específicas del Enum de la Base de Datos
         let metodoEnum = 'Efectivo';
@@ -248,12 +294,12 @@ const VistaBarra = () => {
         const metodoTranslated = metodoEnum === 'Efectivo' ? String(t('efectivo')).toLowerCase() : 
                                  metodoEnum === 'Tarjeta' ? String(t('tarjeta')).toLowerCase() : metodoEnum;
         
-        const mensaje = esDigital
-            ? t('Confirm_pago_digital_barra', {metodo: metodoEnum})
-            : t('Confirm_pago_fisico_barra', {metodo: metodoTranslated});
+            const totalItems = itemsToPay.reduce((acc, i) => acc + i.precioFinal, 0).toFixed(2);
+            const mensaje = esDigital
+                ? t('Confirm_pago_digital_barra', {metodo: metodoEnum, total: totalItems})
+                : t('Confirm_pago_fisico_barra', {metodo: metodoTranslated, total: totalItems});
 
         if (await showConfirm(mensaje)) {
-            const itemsPorEnviar = carrito.filter(item => !item.enviado);
             if (itemsPorEnviar.length === 0) return;
 
             // Cálculo del número de pedido: Secuencial por día
@@ -453,6 +499,17 @@ const VistaBarra = () => {
 
 
     const totalPrecioCarrito = carrito.reduce((acc, item) => acc + item.precioFinal, 0);
+    const totalPendientePago = carrito.filter(item => item.estadoPago !== 'pagado').reduce((acc, i) => acc + i.precioFinal, 0);
+
+    if (!idMesaBarra) {
+        return (
+            <div className="vb-container" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', gap: '20px' }}>
+                <span className="material-symbols-outlined vb-icon-spin" style={{ fontSize: '48px', color: '#f39c12' }}>autorenew</span>
+                <h2>Conectando con la Barra...</h2>
+                <p>Esperando conexión con el servidor principal.</p>
+            </div>
+        );
+    }
 
     if (cargandoMenu) {
         return (
@@ -485,8 +542,8 @@ const VistaBarra = () => {
 
                 <nav className="vb-nav">
                     <span
-                        className={`vb-nav-link ${seccionActiva === 'menu' ? 'active' : ''} ${(pagoSolicitado || esperandoCobro) && seccionActiva !== 'menu' ? 'disabled' : ''}`}
-                        onClick={() => !pagoSolicitado && !esperandoCobro && setSeccionActiva('menu')}
+                        className={`vb-nav-link ${seccionActiva === 'menu' ? 'active' : ''} ${((pagoSolicitado || esperandoCobro) && totalPendientePago > 0) && seccionActiva !== 'menu' ? 'disabled' : ''}`}
+                        onClick={() => (!(pagoSolicitado || esperandoCobro) || totalPendientePago === 0) && setSeccionActiva('menu')}
                     > {t('MENU')} </span>
                     <span
                         className={`vb-nav-link ${seccionActiva === 'pedido' ? 'active' : ''}`}
@@ -614,7 +671,7 @@ const VistaBarra = () => {
                                     <div className="vb-espera-card">
                                         <span className="material-symbols-outlined icon-large">hourglass_empty</span>
                                         <h3>{t('Enseguida_te_cobramos')}</h3>
-                                        <p><Trans i18nKey="Enseguida_te_cobramos_desc" values={{ total: totalPrecioCarrito.toFixed(2), metodo: metodoPagoMesa === 'cash' ? t('efectivo') : t('tarjeta') }}>Por favor, acércate a la caja para abonar <strong>{totalPrecioCarrito.toFixed(2)}€</strong> en {metodoPagoMesa === 'cash' ? t('efectivo') : t('tarjeta')}.</Trans></p>
+                                        <p><Trans i18nKey="Enseguida_te_cobramos_desc" values={{ total: totalPendientePago.toFixed(2), metodo: metodoPagoMesa === 'cash' ? t('efectivo') : t('tarjeta') }}>Por favor, acércate a la caja para abonar <strong>{totalPendientePago.toFixed(2)}€</strong> en {metodoPagoMesa === 'cash' ? t('efectivo') : t('tarjeta')}.</Trans></p>
                                     </div>
                                 ) : !pagoSolicitado ? (
                                     <div className="vb-pago-grid">
@@ -670,11 +727,23 @@ const VistaBarra = () => {
                                             <p>{t('Tu_numero_recogida')}</p>
                                             <h2>#{numeroPedido}</h2>
                                         </div>
-                                        <button className="vb-btn-carrito btn-dark" onClick={() => {
-                                            setCarrito([]);
-                                            setPagoSolicitado(false);
-                                            setNumeroPedido(null);
-                                            setSeccionActiva('menu');
+                                        <button className="vb-btn-carrito btn-dark" onClick={async () => {
+                                            try {
+                                                // Close the current order for this bar table so the next order gets a fresh ID
+                                                const pedido = await getPedidoActivo(idMesaBarra);
+                                                if (pedido) {
+                                                    const { finalizarPedido } = await import('../services/apiCliente');
+                                                    await finalizarPedido(pedido.id, null); // don't invalidate mesa UUID for bar
+                                                }
+                                                // Sólo limpiamos la interfaz si la petición no falló.
+                                                setCarrito([]);
+                                                setPagoSolicitado(false);
+                                                setNumeroPedido(null);
+                                                setSeccionActiva('menu');
+                                            } catch (err) {
+                                                console.error("Error cerrando pedido al hacer nuevo pedido", err);
+                                                showAlert("Error de conexión con la base de datos al cerrar el ticket anterior. Inténtalo de nuevo.", "error");
+                                            }
                                         }} style={{ marginTop: '20px', width: '100%', maxWidth: '300px' }}>
                                             {t('Nuevo_pedido')}
                                         </button>
