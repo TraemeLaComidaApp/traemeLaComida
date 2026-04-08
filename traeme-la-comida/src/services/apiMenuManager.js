@@ -135,12 +135,14 @@ export const guardarMenuCompletoAdmin = async (categoriasConfig) => {
                 body: JSON.stringify({ nombre: String(cat.nombre), orden: Number(cat.orden) })
             });
             catId = data?.id || data?.data?.id || (Array.isArray(data) && data[0]?.id);
+            // Siempre añadimos a la cola de traducción, el backend filtrará si ya existe
             if (catId) translationQueue.add(cat.nombre);
         } else {
             await fetchApi(`/categoria-producto/${cat.id}`, {
                 method: 'PATCH',
                 body: JSON.stringify({ nombre: String(cat.nombre), orden: Number(cat.orden) })
             });
+            translationQueue.add(cat.nombre);
         }
 
         if (!catId) continue;
@@ -187,10 +189,10 @@ export const guardarMenuCompletoAdmin = async (categoriasConfig) => {
 
             if (!prodId) continue;
             
-            // Queue translation
-            if (isNewProd) {
-                translationQueue.add(prod.nombre);
-                if (prod.descripcion || prod.desc) translationQueue.add(prod.descripcion || prod.desc);
+            // Queue translation (el backend filtra duplicados)
+            translationQueue.add(prod.nombre);
+            if (prod.descripcion || prod.desc) {
+                translationQueue.add(prod.descripcion || prod.desc);
             }
 
             // Limpiar relaciones de opciones
@@ -220,6 +222,7 @@ export const guardarMenuCompletoAdmin = async (categoriasConfig) => {
                         }
                     } else {
                         await fetchApi(`/categoria-opcion/${grupo.id}`, { method: 'PATCH', body: JSON.stringify({ nombre: String(grupo.nombre) }) });
+                        translationQueue.add(grupo.nombre);
                     }
 
                     if (!grupoId) continue;
@@ -243,6 +246,8 @@ export const guardarMenuCompletoAdmin = async (categoriasConfig) => {
                             idsOpcionesNuevas.add(Number(op.id));
                             await fetchApi(`/opcion/${op.id}`, { method: 'PATCH', body: JSON.stringify(opPayload) });
                         }
+                        // Siempre añadimos la opción para asegurar traducción
+                        translationQueue.add(op.nombre);
                     }
                     gruposListos.push({ id: grupoId, min: grupo.min_selecciones, max: grupo.max_selecciones });
                 }

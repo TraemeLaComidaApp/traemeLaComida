@@ -93,9 +93,27 @@ export class VoiceService {
 
   async addBatchTranslationsToFile(batch: { key: string, translations: { es: string, en: string, fr: string, de: string } }[]): Promise<void> {
     try {
-      const i18nPath = path.resolve(process.cwd(), '../traeme-la-comida/src/i18n.js');
+      if (!this.groqApiKey) {
+        this.logger.warn('⚠️ No se ha detectado GROQ_API_KEY. Las traducciones no se generarán en i18n.js');
+        return;
+      }
+
+      // Soporte para ruta configurable vía .env para colaboradores
+      const customPath = this.configService.get<string>('FRONTEND_PATH');
+      let i18nPath: string;
+      
+      if (customPath) {
+        i18nPath = path.isAbsolute(customPath) 
+          ? path.join(customPath, 'src/i18n.js')
+          : path.resolve(process.cwd(), customPath, 'src/i18n.js');
+      } else {
+        // Fallback a la estructura estándar
+        i18nPath = path.resolve(process.cwd(), '../traeme-la-comida/src/i18n.js');
+      }
+
       if (!fs.existsSync(i18nPath)) {
-        this.logger.error(`i18n.js NO encontrado en ${i18nPath}`);
+        this.logger.error(`❌ i18n.js NO encontrado en: ${i18nPath}`);
+        this.logger.error('Sugerencia: Define FRONTEND_PATH en tu .env con la ruta a la carpeta del frontend.');
         return;
       }
 
