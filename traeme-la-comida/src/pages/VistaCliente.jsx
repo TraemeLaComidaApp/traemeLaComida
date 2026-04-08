@@ -977,12 +977,8 @@ const VistaCliente = () => {
                                                         className={`vc-option-row ${isSelected ? 'selected' : ''}`}
                                                         onClick={() => manejarSeleccionOpcion(grupo.id, opcion, grupo.max_selecciones)}
                                                     >
-                                                        <div className={grupo.max_selecciones === 1 ? "vc-radio-custom" : "vc-checkbox-custom"}>
-                                                            {isSelected && (
-                                                                grupo.max_selecciones === 1
-                                                                    ? <div className="vc-radio-dot"></div>
-                                                                    : <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>check</span>
-                                                            )}
+                                                        <div className="vc-radio-custom">
+                                                            {isSelected && <div className="vc-radio-dot"></div>}
                                                         </div>
                                                         <span className="vc-option-name">{t(opcion.nombre)}</span>
                                                         {opcion.suplemento > 0 && (
