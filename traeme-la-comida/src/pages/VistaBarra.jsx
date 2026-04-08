@@ -21,6 +21,12 @@ import { voiceService } from '../services/voiceService';
 
 const VistaBarra = () => {
     const { t } = useTranslation();
+
+    const formatUrl = (url) => {
+        if (!url) return '';
+        if (url.startsWith('http://') || url.startsWith('https://')) return url;
+        return `https://${url}`;
+    };
     const { showAlert, showConfirm, ModalComponent } = useCustomModal();
     const [seccionActiva, setSeccionActiva] = useState('menu');
     const [filtroActivo, setFiltroActivo] = useState('Todo');
@@ -352,7 +358,7 @@ const VistaBarra = () => {
                     if (configNegocio.link_resenas_google) {
                         setTimeout(async () => {
                             if (await showConfirm(t("Review_google_title"), t("Review_google_desc_barra"), t("Review_google_yes"), t("Review_google_no"))) {
-                                window.open(configNegocio.link_resenas_google, '_blank');
+                                window.open(formatUrl(configNegocio.link_resenas_google), '_blank');
                             }
                         }, 500);
                     }

@@ -21,6 +21,12 @@ import { voiceService } from '../services/voiceService';
 
 const VistaCliente = () => {
     const { t } = useTranslation();
+
+    const formatUrl = (url) => {
+        if (!url) return '';
+        if (url.startsWith('http://') || url.startsWith('https://')) return url;
+        return `https://${url}`;
+    };
     const { showAlert, showConfirm, ModalComponent } = useCustomModal();
     const { uuid } = useParams();
     const [mesa, setMesa] = useState(null);
@@ -368,7 +374,7 @@ const VistaCliente = () => {
                         if (configNegocio.link_resenas_google) {
                             setTimeout(async () => {
                                 if (await showConfirm(t("Review_google_title"), t("Review_google_desc"), t("Review_google_yes"), t("Review_google_no"))) {
-                                    window.open(configNegocio.link_resenas_google, '_blank');
+                                    window.open(formatUrl(configNegocio.link_resenas_google), '_blank');
                                 }
                             }, 500);
                         }
@@ -425,7 +431,7 @@ const VistaCliente = () => {
                 if (configNegocio.link_resenas_google) {
                     setTimeout(async () => {
                         if (await showConfirm("Para nosotros es muy importante tu opinión, ¿Nos ayudas con una reseña en Google?", "¡Gracias por tu visita!", "Claro que sí", "En otro momento")) {
-                            window.open(configNegocio.link_resenas_google, '_blank');
+                            window.open(formatUrl(configNegocio.link_resenas_google), '_blank');
                         }
                     }, 500);
                 }

@@ -70,10 +70,17 @@ const DatosNegocio = ({ nombreActual, alGuardarNombre }) => {
 
     const manejarGuardar = async () => {
         try {
+            // Sanitizar el link de reseñas para asegurar que tenga protocolo
+            let linkLimpio = linkResenas.trim();
+            if (linkLimpio && !linkLimpio.startsWith('http://') && !linkLimpio.startsWith('https://')) {
+                linkLimpio = `https://${linkLimpio}`;
+                setLinkResenas(linkLimpio); // Actualizamos UI también
+            }
+
             // Enviamos el archivo real si han subido uno nuevo, si no, enviamos la URL antigua
             const dataAAgregar = logoArchivoFisico ? logoArchivoFisico : logo;
 
-            await updateConfiguracionLocal(configId, nombreLocal, dataAAgregar, colorPrimario, linkResenas);
+            await updateConfiguracionLocal(configId, nombreLocal, dataAAgregar, colorPrimario, linkLimpio);
             await updateCredencial('propietario', usuarioPropietario, passPropietario, emailPropietario);
             await updateCredencial('camarero', usuarioCamarero, pinCamarero, null);
             await updateCredencial('cocina', usuarioCocina, pinCocina, null);
