@@ -118,6 +118,28 @@ class VoiceService {
             throw error;
         }
     }
+
+    async parseKitchenCommand(transcript, menuData, activeOrders) {
+        // CONTEXTO REDUCIDO PARA LA COCINA
+        const menuContext = menuData.map(cat => ({
+            categoria: cat.nombre,
+            productos: cat.productos.map(p => ({
+                id: p.id,
+                nombre: p.nombre
+            }))
+        }));
+
+        try {
+            const command = await fetchApi('/voice/parse-kitchen-command', {
+                method: 'POST',
+                body: JSON.stringify({ transcript, menuContext, activeOrders })
+            });
+            return command;
+        } catch (error) {
+            console.error("Error in structured kitchen parsing:", error);
+            throw error;
+        }
+    }
 }
 
 export const voiceService = new VoiceService();

@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import './VistaCocina.css';
 import { loginWithCredenciales } from '../services/apiAuth';
 import { useCocinaRealtime } from '../hooks/useCocinaRealtime';
-import { actualizarEstadoDetalle, marcarProductoAgotado } from '../services/apiCocina';
-import { getMenuCliente } from '../services/apiMenuManager';
+import { actualizarEstadoDetalle, marcarProductoAgotado, marcarProductoDisponible } from '../services/apiCocina';
+import { getMenuCompletoAdmin } from '../services/apiMenuManager';
+import { voiceService } from '../services/voiceService';
+import { useTranslation } from 'react-i18next';
 
 const VistaCocina = () => {
     // --- ESTADOS DE AUTENTICACIÓN ---
@@ -19,8 +21,9 @@ const VistaCocina = () => {
     const [completados, setCompletados] = useState([]);
     const [productosAgotados, setProductosAgotados] = useState([]);
     const [hora, setHora] = useState(new Date().toLocaleTimeString());
-    const [escuchando, setEscuchando] = useState(false);
+    const [estadoVoz, setEstadoVoz] = useState(null); // null, 'grabando', 'procesando'
     const [ultimoComando, setUltimoComando] = useState("");
+    const { t } = useTranslation();
 
     const [menuData, setMenuData] = useState([]);
     const [modalBloquearStock, setModalBloquearStock] = useState(false);
@@ -33,7 +36,7 @@ const VistaCocina = () => {
 
     useEffect(() => {
         const fetchMenu = async () => {
-            const dataMenu = await getMenuCliente();
+            const dataMenu = await getMenuCompletoAdmin();
             setMenuData(dataMenu || []);
         };
         fetchMenu();
@@ -110,23 +113,53 @@ const VistaCocina = () => {
     };
 
     // --- LÓGICA DE STOCK (Manual y DB) ---
-    const marcarComoAgotadoLocal = async (ingrediente) => {
-        const ingredienteLimpio = ingrediente.trim().toUpperCase();
+    const marcarComoAgotadoLocal = async (nombreProducto) => {
+        const ingredienteLimpio = nombreProducto.trim();
         if (!ingredienteLimpio) return;
 
         try {
             await marcarProductoAgotado(ingredienteLimpio);
-            setProductosAgotados(prev => {
-                if (!prev.includes(ingredienteLimpio)) return [...prev, ingredienteLimpio];
-                return prev;
-            });
-            setUltimoComando(`¡${ingredienteLimpio} bloqueado en TPV! (Verificado en DB)`);
-            cargarPedidos();
+            
+            // Actualizar estado local del menú
+            setMenuData(prev => prev.map(cat => ({
+                ...cat,
+                productos: cat.productos.map(p => 
+                    p.nombre.toLowerCase() === ingredienteLimpio.toLowerCase() 
+                    ? { ...p, disponible: false } 
+                    : p
+                )
+            })));
+
+            setUltimoComando(`¡${ingredienteLimpio.toUpperCase()} bloqueado!`);
         } catch (error) {
             console.error(error);
             setUltimoComando(`Error al bloquear ${ingredienteLimpio}`);
         }
+        setTimeout(() => setUltimoComando(""), 4000);
+    };
 
+    const reponerProductoLocal = async (nombreProducto) => {
+        const ingredienteLimpio = nombreProducto.trim();
+        if (!ingredienteLimpio) return;
+
+        try {
+            await marcarProductoDisponible(ingredienteLimpio);
+            
+            // Actualizar estado local del menú
+            setMenuData(prev => prev.map(cat => ({
+                ...cat,
+                productos: cat.productos.map(p => 
+                    p.nombre.toLowerCase() === ingredienteLimpio.toLowerCase() 
+                    ? { ...p, disponible: true } 
+                    : p
+                )
+            })));
+
+            setUltimoComando(`¡${ingredienteLimpio.toUpperCase()} repuesto!`);
+        } catch (error) {
+            console.error(error);
+            setUltimoComando(`Error al reponer ${ingredienteLimpio}`);
+        }
         setTimeout(() => setUltimoComando(""), 4000);
     };
 
@@ -144,69 +177,96 @@ const VistaCocina = () => {
         }
     };
 
-    // --- LÓGICA DE RECONOCIMIENTO DE VOZ ---
-    const iniciarReconocimientoVoz = () => {
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!SpeechRecognition) {
-            alert("Tu navegador no soporta comandos de voz. Prueba a usar Google Chrome.");
-            return;
+    // --- LÓGICA DE RECONOCIMIENTO DE VOZ ASISTIDA POR IA ---
+    const manejarVoz = async () => {
+        if (estadoVoz === 'grabando') {
+            detenerYProcesarVoz();
+        } else {
+            iniciarGrabacion();
         }
+    };
 
-        const recognition = new SpeechRecognition();
-        recognition.lang = 'es-ES';
-        recognition.interimResults = false;
-        recognition.maxAlternatives = 1;
+    const iniciarGrabacion = async () => {
+        try {
+            await voiceService.startRecording();
+            setEstadoVoz('grabando');
+            setUltimoComando("Escuchando comando...");
+        } catch (err) {
+            console.error("Error al grabar:", err);
+            setUltimoComando("Error al acceder al micrófono");
+            setTimeout(() => setUltimoComando(""), 3000);
+        }
+    };
 
-        recognition.onstart = () => {
-            setEscuchando(true);
-            setUltimoComando("Escuchando...");
-        };
-
-        recognition.onresult = (event) => {
-            const comando = event.results[0][0].transcript.toLowerCase();
-
-            if (comando.includes("completar") || comando.includes("listo") || comando.includes("pedido")) {
-                const numerosMatch = comando.match(/\d+/);
-                if (numerosMatch) {
-                    const idBuscado = numerosMatch[0];
-                    const pedidoEncontrado = pedidos.find(p => p.idPedido === parseInt(idBuscado));
-                    if (pedidoEncontrado) {
-                        finalizarPedidoLocal(pedidoEncontrado);
-                        setUltimoComando(`Pedido ${idBuscado} completado`);
-                    } else {
-                        setUltimoComando(`Error: Pedido ${idBuscado} no encontrado`);
-                    }
-                } else {
-                    setUltimoComando(`No entendí el número. Dijiste: "${comando}"`);
-                }
+    const detenerYProcesarVoz = async () => {
+        try {
+            setEstadoVoz('procesando');
+            setUltimoComando("Procesando comando con IA...");
+            
+            const blob = await voiceService.stopRecording();
+            const transcript = await voiceService.transcribe(blob);
+            
+            if (!transcript) {
+                setEstadoVoz(null);
+                setUltimoComando("No se escuchó nada");
+                return;
             }
-            else if (comando.includes("agotado") || comando.includes("sin stock") || comando.includes("no queda")) {
-                let productoStr = comando.replace(/.*(agotado|sin stock|no queda)\s+/i, '').trim();
-                productoStr = productoStr.replace(/^(el|la|los|las|un|una)\s+/i, '');
 
-                if (productoStr) {
-                    marcarComoAgotadoLocal(productoStr);
+            const command = await voiceService.parseKitchenCommand(transcript, menuData, pedidos);
+            
+            if (command.action === 'COMPLETE_ORDER') {
+                const idPedido = parseInt(command.targetId);
+                const pedidoObj = pedidos.find(p => p.idPedido === idPedido);
+                if (pedidoObj) {
+                    await finalizarPedidoLocal(pedidoObj);
+                    setUltimoComando(`¡Pedido #${idPedido} completado!`);
                 } else {
-                    setUltimoComando("Dime qué se ha agotado. Ej: 'Agotado croissant'");
+                    setUltimoComando(`Error: Pedido #${idPedido} no está activo`);
+                }
+            } 
+            else if (command.action === 'OUT_OF_STOCK') {
+                const prodId = command.targetId;
+                // Buscamos el nombre del producto por su ID en menuData
+                let nombreProd = "";
+                menuData.forEach(cat => {
+                    const p = cat.productos.find(pr => pr.id === prodId);
+                    if (p) nombreProd = p.nombre;
+                });
+
+                if (nombreProd) {
+                    await marcarComoAgotadoLocal(nombreProd);
+                    setUltimoComando(`¡${nombreProd} marcado como AGOTADO!`);
+                } else {
+                    setUltimoComando("Error: Producto no identificado");
+                }
+            } 
+            else if (command.action === 'RESTOCK_PRODUCT') {
+                const prodId = command.targetId;
+                let nombreProd = "";
+                menuData.forEach(cat => {
+                    const p = cat.productos.find(pr => pr.id === prodId);
+                    if (p) nombreProd = p.nombre;
+                });
+
+                if (nombreProd) {
+                    await reponerProductoLocal(nombreProd);
+                } else {
+                    setUltimoComando("Error: Producto no identificado");
                 }
             }
             else {
-                setUltimoComando(`Comando desconocido: "${comando}"`);
+                setUltimoComando(`No entendí el comando: "${transcript}"`);
             }
-        };
 
-        recognition.onerror = () => {
-            setEscuchando(false);
-            setUltimoComando("Error al escuchar. Intenta de nuevo.");
+            setEstadoVoz(null);
             setTimeout(() => setUltimoComando(""), 4000);
-        };
 
-        recognition.onend = () => {
-            setEscuchando(false);
-            setTimeout(() => setUltimoComando(""), 4000);
-        };
-
-        recognition.start();
+        } catch (err) {
+            console.error("Error procesando voz en cocina:", err);
+            setEstadoVoz(null);
+            setUltimoComando("Error en el servidor de IA");
+            setTimeout(() => setUltimoComando(""), 3000);
+        }
     };
 
     // --- PANTALLA DE LOGIN ---
@@ -274,24 +334,14 @@ const VistaCocina = () => {
                         <h1>KDS <span>TABLET-PRO</span></h1>
                         <div className="vcoc-station">
                             ESTACIÓN #01
-                            {productosAgotados.length > 0 && (
-                                <span className="agotados-badge">
-                                    🔴 AGOTADOS:
-                                    {productosAgotados.map((prod, idx) => (
-                                        <span key={idx} className="agotado-tag" onClick={() => restaurarStockLocal(prod)} title="Clic para restaurar/quitar de la lista visual (permanente en Ajustes)">
-                                            {prod}{idx < productosAgotados.length - 1 ? ", " : ""}
-                                        </span>
-                                    ))}
-                                </span>
-                            )}
                         </div>
                     </div>
                 </div>
                 <div className="vcoc-header-right">
                     {/* NUEVO BOTÓN MANUAL DE STOCK */}
-                    <button onClick={abrirModalStock} className="vcoc-btn-manual" title="Marcar producto como agotado">
-                        <span className="material-symbols-outlined">block</span>
-                        BLOQUEAR STOCK
+                    <button onClick={abrirModalStock} className="vcoc-btn-manual" title="Control de disponibilidad de productos">
+                        <span className="material-symbols-outlined">inventory_2</span>
+                        CONTROL DE STOCK
                     </button>
 
                     <div className="vcoc-stats">
@@ -394,11 +444,19 @@ const VistaCocina = () => {
 
             <footer className="vcoc-footer">
                 <div className="vcoc-footer-left">
-                    <button className={`vcoc-btn-voz ${escuchando ? 'escuchando' : ''}`} onClick={iniciarReconocimientoVoz}>
-                        <span className="material-symbols-outlined">mic</span>
+                    <button 
+                        className={`vcoc-btn-voz ${estadoVoz === 'grabando' ? 'grabando' : ''} ${estadoVoz === 'procesando' ? 'procesando' : ''}`} 
+                        onClick={manejarVoz}
+                        disabled={estadoVoz === 'procesando'}
+                    >
+                        <span className="material-symbols-outlined">
+                            {estadoVoz === 'grabando' ? 'stop_circle' : (estadoVoz === 'procesando' ? 'sync' : 'mic')}
+                        </span>
                         <div className="vcoc-voz-text">
-                            <div className="voz-title">{escuchando ? "ESCUCHANDO..." : "ASISTENTE DE VOZ KDS"}</div>
-                            <div className="voz-subtitle">EJ: "COMPLETAR 501" o "AGOTADO AGUACATE"</div>
+                            <div className="voz-title">
+                                {estadoVoz === 'grabando' ? "PULSA PARA TERMINAR" : (estadoVoz === 'procesando' ? "PROCESANDO CON IA..." : "ASISTENTE DE COCINA")}
+                            </div>
+                            <div className="voz-subtitle">EJ: "PEDIDO 501 LISTO", "AGOTADO CAFÉ" o "CAFÉ REPUESTO"</div>
                         </div>
                     </button>
                 </div>
@@ -432,25 +490,38 @@ const VistaCocina = () => {
                         />
                         <div style={{ overflowY: 'auto', paddingRight: '10px' }}>
                             {menuData.flatMap(cat => cat.productos).filter(p => p.nombre.toLowerCase().includes(filtroStock.toLowerCase())).map(prod => {
-                                const isBloqueado = productosAgotados.includes(prod.nombre.toUpperCase());
+                                const isBloqueado = !prod.disponible;
                                 return (
                                     <div 
                                         key={prod.id} 
-                                        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', borderBottom: '1px solid #334155', borderRadius: '8px', transition: 'background 0.2s', opacity: isBloqueado ? 0.6 : 1 }}
+                                        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', borderBottom: '1px solid #334155', borderRadius: '8px', transition: 'background 0.2s' }}
                                     >
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                                            <img src={prod.img} alt="" style={{ width: '40px', height: '40px', borderRadius: '6px', objectFit: 'cover' }} />
-                                            <span style={{ fontWeight: 'bold' }}>{prod.nombre}</span>
+                                            <img src={prod.img} alt="" style={{ width: '40px', height: '40px', borderRadius: '6px', objectFit: 'cover', opacity: isBloqueado ? 0.4 : 1 }} />
+                                            <div>
+                                                <div style={{ fontWeight: 'bold', color: isBloqueado ? '#94a3b8' : 'white' }}>{prod.nombre}</div>
+                                                <div style={{ fontSize: '11px', color: isBloqueado ? '#ef4444' : '#22c55e', fontWeight: '800' }}>
+                                                    {isBloqueado ? 'AGOTADO' : 'DISPONIBLE'}
+                                                </div>
+                                            </div>
                                         </div>
                                         <button 
-                                            disabled={isBloqueado}
                                             onClick={() => {
-                                                marcarComoAgotadoLocal(prod.nombre);
-                                                setModalBloquearStock(false);
+                                                if (isBloqueado) reponerProductoLocal(prod.nombre);
+                                                else marcarComoAgotadoLocal(prod.nombre);
                                             }}
-                                            style={{ backgroundColor: isBloqueado ? '#475569' : '#ef4444', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '6px', cursor: isBloqueado ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}
+                                            style={{ 
+                                                backgroundColor: isBloqueado ? '#22c55e' : '#ef4444', 
+                                                color: 'white', 
+                                                border: 'none', 
+                                                padding: '8px 16px', 
+                                                borderRadius: '6px', 
+                                                cursor: 'pointer', 
+                                                fontWeight: 'bold',
+                                                minWidth: '110px'
+                                            }}
                                         >
-                                            {isBloqueado ? 'AGOTADO' : 'BLOQUEAR'}
+                                            {isBloqueado ? 'REPONER' : 'AGOTAR'}
                                         </button>
                                     </div>
                                 );

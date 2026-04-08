@@ -101,4 +101,21 @@ export class VoiceController {
        throw new HttpException('Order parsing failed', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
+
+  @Post('parse-kitchen-command')
+  @ApiOperation({ summary: 'Parse a voice transcript into a kitchen command (complete order or out of stock)' })
+  async parseKitchenCommand(@Body() body: { transcript: string; menuContext: any; activeOrders: any[] }) {
+    const { transcript, menuContext, activeOrders } = body;
+    if (!transcript) {
+      throw new HttpException('Transcript is required', HttpStatus.BAD_REQUEST);
+    }
+
+    try {
+      const command = await this.voiceService.parseKitchenCommand(transcript, menuContext, activeOrders);
+      return command;
+    } catch (error) {
+       this.logger.error('Error parsing kitchen command:', error);
+       throw new HttpException('Kitchen command parsing failed', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
 }

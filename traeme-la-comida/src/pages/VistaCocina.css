@@ -466,11 +466,26 @@
     background-color: var(--primary-soft, #fff7ed);
 }
 
-.vcoc-btn-voz.escuchando {
+.vcoc-btn-voz.grabando {
     border-color: var(--kds-danger);
     color: var(--kds-danger);
     background-color: rgba(239, 68, 68, 0.05);
     animation: pulse 1.5s infinite;
+}
+
+.vcoc-btn-voz.procesando {
+    border-color: #3b82f6;
+    color: #3b82f6;
+    background-color: rgba(59, 130, 246, 0.05);
+}
+
+.vcoc-btn-voz.procesando .material-symbols-outlined {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
 
 @keyframes pulse {

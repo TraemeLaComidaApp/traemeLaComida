@@ -83,3 +83,15 @@ export const marcarProductoAgotado = async (nombreProducto) => {
         });
     }
 };
+
+export const marcarProductoDisponible = async (nombreProducto) => {
+    const productos = await fetchApi('/producto') || [];
+    const prod = productos.find(pr => pr.nombre.toLowerCase().includes(nombreProducto.toLowerCase()));
+    
+    if (prod) {
+        await fetchApi(`/producto/${prod.id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ disponible: true })
+        });
+    }
+};

@@ -184,6 +184,59 @@ export class VoiceService {
     }
   }
 
+  async parseKitchenCommand(transcript: string, menuContext: any, activeOrders: any[]): Promise<any> {
+    if (!this.groqApiKey) {
+      throw new Error('GROQ_API_KEY not configured');
+    }
+
+    const prompt = `
+      Actúa como el asistente de inteligencia artificial de la cocina de un restaurante.
+      Analiza la transcripción de voz del cocinero y determina qué acción quiere realizar.
+
+      ACCIONES POSIBLES:
+      1. COMPLETE_ORDER: Cuando el cocinero dice que un pedido está listo, terminado o completado. Extrae el ID del pedido (número).
+      2. OUT_OF_STOCK: Cuando el cocinero dice que no queda algo, que se ha agotado o que marquemos algo sin existencias. Identifica el ID del producto del menú.
+      3. RESTOCK_PRODUCT: Cuando el cocinero dice que ya hay algo, que se ha repuesto o que lo marquemos como disponible. Identifica el ID del producto del menú.
+
+      CONTEXTO DEL MENÚ (Identifica el ID del producto si es OUT_OF_STOCK o RESTOCK_PRODUCT):
+      ${JSON.stringify(menuContext)}
+
+      TRANSCRIPCIÓN:
+      "${transcript}"
+
+      REGLAS:
+      - Responde ÚNICAMENTE con un objeto JSON.
+      - Si es COMPLETE_ORDER: { "action": "COMPLETE_ORDER", "targetId": ID_DEL_PEDIDO }
+      - Si es OUT_OF_STOCK: { "action": "OUT_OF_STOCK", "targetId": ID_DEL_PRODUCTO }
+      - Si es RESTOCK_PRODUCT: { "action": "RESTOCK_PRODUCT", "targetId": ID_DEL_PRODUCTO }
+      - Si no estás seguro o no hay un comando claro: { "action": "UNKNOWN" }
+      - Para OUT_OF_STOCK o RESTOCK_PRODUCT, busca el producto en el menú y devuelve su campo 'id'.
+    `;
+
+    try {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.groqApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0,
+          response_format: { type: 'json_object' }
+        }),
+      });
+
+      if (!response.ok) throw new Error('Groq Kitchen Parsing failed');
+      const data = await response.json();
+      return JSON.parse(data.choices[0].message.content);
+    } catch (error) {
+      this.logger.error('Error in parseKitchenCommand:', error);
+      throw error;
+    }
+  }
+
   async addTranslationsToFile(key: string, translations: { es: string, en: string, fr: string, de: string }): Promise<void> {
     return this.addBatchTranslationsToFile([{ key, translations }]);
   }
