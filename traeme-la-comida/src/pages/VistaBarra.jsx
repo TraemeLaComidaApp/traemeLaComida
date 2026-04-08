@@ -43,6 +43,7 @@ const VistaBarra = () => {
     const [opcionesElegidas, setOpcionesElegidas] = useState({});
     const [notaOpcional, setNotaOpcional] = useState("");
 
+    const [busqueda, setBusqueda] = useState('');
     const [estadoVoz, setEstadoVoz] = useState(null);
     const [mensajeVoz, setMensajeVoz] = useState("");
 
@@ -195,6 +196,15 @@ const VistaBarra = () => {
         const pollInterval = setInterval(hydrateAndPollBarra, 5000);
         return () => clearInterval(pollInterval);
     }, [idMesaBarra]);
+
+    const normalizarTexto = (texto) => {
+        if (!texto) return "";
+        return texto
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "") // Eliminar acentos
+            .replace(/\s+/g, ""); // Eliminar espacios
+    };
 
     const categoriasTabs = ['Todo', ...menuData.map(c => c.nombre)];
 
@@ -563,12 +573,19 @@ const VistaBarra = () => {
                 {seccionActiva === 'menu' ? (
                     <div className="vb-page-content">
                         <section className="vb-banner">
-                            <div className="vb-banner-text">
+                            <div className="vb-banner-text" style={{ flex: 1 }}>
                                 <h1>{t('Pide_sin_colas')}</h1>
                                 <p>{t('Pide_sin_colas_desc')}</p>
-                                <button className="vb-btn-voz" onClick={iniciarEscuchaVoz}>
-                                    <span className="material-symbols-outlined">mic</span> {t('Pedir_voz')}
-                                </button>
+                                <div className="vb-search-container">
+                                    <span className="material-symbols-outlined vb-search-icon">search</span>
+                                    <input
+                                        type="text"
+                                        placeholder={t('Buscar_platos', 'Buscar platos...')}
+                                        className="vb-search-input"
+                                        value={busqueda}
+                                        onChange={(e) => setBusqueda(e.target.value)}
+                                    />
+                                </div>
                             </div>
                             <div className="vb-banner-img"></div>
                         </section>
@@ -588,23 +605,29 @@ const VistaBarra = () => {
                         <div className="vb-product-list">
                             {menuData
                                 .filter(cat => filtroActivo === 'Todo' || cat.nombre === filtroActivo)
-                                .map(cat => cat.productos.map(prod => (
-                                    <div key={prod.id} className="vb-card" onClick={() => abrirModalProducto(prod, cat)}>
-                                        {prod.img && prod.img !== "" && <img src={prod.img} className="vb-card-img" alt={prod.nombre} />}
-                                        <div className="vb-card-info">
-                                            <h4>{t(prod.nombre)}</h4>
-                                            <p className="vb-card-desc">{t(prod.desc)}</p>
-                                            <div className="vb-card-footer">
-                                                <span className="vb-price">{prod.precio.toFixed(2)}€</span>
-                                                <div className="vb-card-actions">
-                                                    <button className="vb-btn-add">
-                                                        <span className="material-symbols-outlined">add</span>
-                                                    </button>
+                                .map(cat => cat.productos
+                                    .filter(prod => {
+                                        const nombreMatch = normalizarTexto(t(prod.nombre)).includes(normalizarTexto(busqueda));
+                                        const descMatch = normalizarTexto(t(prod.desc)).includes(normalizarTexto(busqueda));
+                                        return nombreMatch || descMatch;
+                                    })
+                                    .map(prod => (
+                                        <div key={prod.id} className="vb-card" onClick={() => abrirModalProducto(prod, cat)}>
+                                            {prod.img && prod.img !== "" && <img src={prod.img} className="vb-card-img" alt={prod.nombre} />}
+                                            <div className="vb-card-info">
+                                                <h4>{t(prod.nombre)}</h4>
+                                                <p className="vb-card-desc">{t(prod.desc)}</p>
+                                                <div className="vb-card-footer">
+                                                    <span className="vb-price">{prod.precio.toFixed(2)}€</span>
+                                                    <div className="vb-card-actions">
+                                                        <button className="vb-btn-add">
+                                                            <span className="material-symbols-outlined">add</span>
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-                                )))}
+                                    )))}
                         </div>
                     </div>
                 ) : (
@@ -761,12 +784,23 @@ const VistaBarra = () => {
                     </div>
                 )}
 
-                {seccionActiva === 'menu' && carrito.length > 0 && (
+                {seccionActiva === 'menu' && (
                     <div className="vb-footer-actions">
-                        <button className="vb-btn-carrito" onClick={() => setSeccionActiva('pedido')}>
-                            <span className="material-symbols-outlined">shopping_basket</span>
-                            {t('VER_MI_PEDIDO', {total: totalPrecioCarrito.toFixed(2)})}
-                        </button>
+                         <div style={{ display: 'flex', gap: '10px' }}>
+                            <button 
+                                className="vb-btn-voz" 
+                                onClick={iniciarEscuchaVoz}
+                                style={{ flex: 1, marginTop: 0, justifyContent: 'center', padding: '12px 5px', fontSize: '14px' }}
+                            >
+                                <span className="material-symbols-outlined">mic</span> {t('Pedir_voz')}
+                            </button>
+                             {carrito.length > 0 && (
+                                <button className="vb-btn-carrito" onClick={() => setSeccionActiva('pedido')} style={{ flex: 2 }}>
+                                    <span className="material-symbols-outlined">shopping_basket</span>
+                                    {t('VER_MI_PEDIDO', {total: totalPrecioCarrito.toFixed(2)})}
+                                </button>
+                            )}
+                        </div>
                     </div>
                 )}
             </div>
@@ -817,12 +851,8 @@ const VistaBarra = () => {
                                                         className={`vb-option-row ${isSelected ? 'selected' : ''}`}
                                                         onClick={() => manejarSeleccionOpcion(grupo.id, opcion, grupo.max_selecciones)}
                                                     >
-                                                        <div className={grupo.max_selecciones === 1 ? "vb-radio-custom" : "vb-checkbox-custom"}>
-                                                            {isSelected && (
-                                                                grupo.max_selecciones === 1
-                                                                    ? <div className="vb-radio-dot"></div>
-                                                                    : <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>check</span>
-                                                            )}
+                                                        <div className="vb-radio-custom">
+                                                            {isSelected && <div className="vb-radio-dot"></div>}
                                                         </div>
                                                         <span className="vb-option-name">{t(opcion.nombre)}</span>
                                                         {opcion.suplemento > 0 && (

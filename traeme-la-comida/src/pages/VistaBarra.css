@@ -188,8 +188,51 @@
     cursor: pointer;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
+    transition: 0.2s;
+}
+
+.vb-btn-voz:active {
+    transform: scale(0.95);
+    opacity: 0.9;
+}
+
+/* =========================================================
+   3.5 BÚSQUEDA
+   ========================================================= */
+.vb-search-container {
     margin-top: 15px;
+    position: relative;
+    width: 100%;
+}
+
+.vb-search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    font-size: 20px;
+}
+
+.vb-search-input {
+    width: 100%;
+    padding: 12px 12px 12px 40px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    font-size: 14px;
+    outline: none;
+    box-sizing: border-box;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+    transition: all 0.2s ease;
+    font-family: inherit;
+    background: #fff;
+}
+
+.vb-search-input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-light);
 }
 
 /* =========================================================
@@ -664,12 +707,9 @@
     transform: translateX(-50%);
     width: 100%;
     max-width: 768px;
-    padding: 20px;
-    background: rgba(255, 255, 255, 0.9);
+    padding: 15px 20px;
+    background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(10px);
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
     z-index: 1000;
     border-top: 1px solid var(--border-color);
     box-sizing: border-box;
