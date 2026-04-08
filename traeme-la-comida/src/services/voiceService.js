@@ -87,6 +87,37 @@ class VoiceService {
             throw error;
         }
     }
+
+    async parseOrder(transcript, menuData) {
+        // PREPARE MINIMAL MENU CONTEXT FOR LLM (TO SAVE TOKENS AND AVOID CONFUSION)
+        const menuContext = menuData.map(cat => ({
+            categoria: cat.nombre,
+            productos: cat.productos.map(p => ({
+                id: p.id,
+                nombre: p.nombre,
+                descripcion: p.descripcion || p.desc,
+                gruposOpciones: p.gruposOpciones?.map(g => ({
+                    id: g.id,
+                    nombre: g.nombre,
+                    opciones: g.opciones?.map(o => ({
+                        id: o.id,
+                        nombre: o.nombre
+                    }))
+                }))
+            }))
+        }));
+
+        try {
+            const result = await fetchApi('/voice/parse-order', {
+                method: 'POST',
+                body: JSON.stringify({ transcript, menuContext })
+            });
+            return result.items || [];
+        } catch (error) {
+            console.error("Error in structured voice parsing:", error);
+            throw error;
+        }
+    }
 }
 
 export const voiceService = new VoiceService();

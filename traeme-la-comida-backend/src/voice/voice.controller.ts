@@ -84,4 +84,21 @@ export class VoiceController {
       throw new HttpException('Batch translation failed', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
+
+  @Post('parse-order')
+  @ApiOperation({ summary: 'Parse a voice transcript into a structured order' })
+  async parseOrder(@Body() body: { transcript: string; menuContext: any }) {
+    const { transcript, menuContext } = body;
+    if (!transcript || !menuContext) {
+      throw new HttpException('Transcript and menuContext are required', HttpStatus.BAD_REQUEST);
+    }
+
+    try {
+      const items = await this.voiceService.parseOrder(transcript, menuContext);
+      return { items };
+    } catch (error) {
+       this.logger.error('Error parsing order:', error);
+       throw new HttpException('Order parsing failed', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
 }

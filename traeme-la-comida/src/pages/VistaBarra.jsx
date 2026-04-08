@@ -415,85 +415,86 @@ const VistaBarra = () => {
     };
 
     const analizarPedidoVoz = async (transcript) => {
-        let textoRestante = transcript.toLowerCase();
-        let productoMatch = null;
-
-        const todosProductos = [];
-        menuData.forEach(cat => {
-            cat.productos?.forEach(p => {
-                todosProductos.push({ p, cat });
-            });
-        });
-
-        todosProductos.sort((a, b) => (t(b.p.nombre).length + b.p.nombre.length) - (t(a.p.nombre).length + a.p.nombre.length));
-
-        for (const { p } of todosProductos) {
-            const nombreOriginal = p.nombre.toLowerCase();
-            const nombreTraducido = t(p.nombre).toLowerCase();
-
-            const regexOrig = new RegExp(`\\b${nombreOriginal}\\b`, 'i');
-            const regexTrad = new RegExp(`\\b${nombreTraducido}\\b`, 'i');
-
-            if (regexOrig.test(textoRestante) || regexTrad.test(textoRestante)) {
-                productoMatch = p;
-                textoRestante = textoRestante.replace(nombreOriginal, '').replace(nombreTraducido, '');
-                break;
+        try {
+            setEstadoVoz('procesando');
+            setMensajeVoz(t('Procesando_pedido'));
+            
+            // Usamos el nuevo servicio con IA para parsear el pedido estructurado
+            const itemsExtraidos = await voiceService.parseOrder(transcript, menuData);
+            
+            if (!itemsExtraidos || itemsExtraidos.length === 0) {
+                setEstadoVoz('error');
+                setMensajeVoz(t('Error_voz_no_entiendo'));
+                setTimeout(() => setEstadoVoz(null), 3000);
+                return;
             }
-        }
 
-        if (!productoMatch) {
-            setEstadoVoz('error');
-            setMensajeVoz(t('Error_voz'));
-            return;
-        }
-
-        const opcionesEncontradas = {};
-        let precioExtraTotal = 0;
-        let nombresOpciones = [];
-
-        productoMatch.gruposOpciones?.forEach(grupo => {
-            opcionesEncontradas[grupo.id] = [];
-            grupo.opciones?.forEach(opt => {
-                const optOriginal = opt.nombre.toLowerCase();
-                const optTraducida = t(opt.nombre).toLowerCase();
-                
-                const regO = new RegExp(`\\b${optOriginal}\\b`, 'i');
-                const regT = new RegExp(`\\b${optTraducida}\\b`, 'i');
-
-                if (regO.test(textoRestante) || regT.test(textoRestante)) {
-                    opcionesEncontradas[grupo.id].push(opt);
-                    precioExtraTotal += opt.suplemento;
-                    nombresOpciones.push(t(opt.nombre));
-                    textoRestante = textoRestante.replace(optOriginal, '').replace(optTraducida, '');
-                }
+            const todosProductos = [];
+            menuData.forEach(cat => {
+                cat.productos?.forEach(p => todosProductos.push(p));
             });
-        });
 
-        const notaFinal = textoRestante.replace(/por favor|quiero|un|una|unas|unos/g, '').trim().replace(/^,+|,+$/g, '');
+            const itemsParaAgregar = [];
+            const labelsConfirmacion = [];
 
-        setEstadoVoz(null);
-        let descItem = t(productoMatch.nombre);
-        if (nombresOpciones.length > 0) descItem += " (" + nombresOpciones.join(", ") + ")";
-        if (notaFinal) descItem += " [" + notaFinal + "]";
+            for (const item of itemsExtraidos) {
+                const prod = todosProductos.find(p => p.id === item.productId);
+                if (!prod) continue;
 
-        const mensajeConfirm = t('Confirm_voz_pedido', { item: descItem });
-        
-        if (await showConfirm(mensajeConfirm, t('Pedido_por_voz'))) {
-            const nuevoItem = {
-                producto: { id: productoMatch.id, nombre: productoMatch.nombre, precio: productoMatch.precio },
-                nombre: productoMatch.nombre,
-                precioFinal: productoMatch.precio + precioExtraTotal,
-                extrasAplicados: Object.entries(opcionesEncontradas).flatMap(([grupoId, opts]) => 
-                    opts.map(o => ({ 
-                        opcionSeleccionada: { id: o.id, nombre: o.nombre, suplemento: o.suplemento } 
-                    }))
-                ),
-                nota: notaFinal,
-                enviado: false
-            };
-            setCarrito(prev => [...prev, nuevoItem]);
-            showAlert(t('Exito_voz'), 'success');
-            setSeccionActiva('pedido');
+                let precioExtra = 0;
+                const opcionesAplicadas = [];
+                const nombresOpciones = [];
+
+                if (item.optionIds && item.optionIds.length > 0) {
+                    prod.gruposOpciones?.forEach(grupo => {
+                        grupo.opciones?.forEach(opt => {
+                            if (item.optionIds.includes(opt.id)) {
+                                opcionesAplicadas.push({
+                                    opcionSeleccionada: { id: opt.id, nombre: opt.nombre, suplemento: opt.suplemento }
+                                });
+                                precioExtra += opt.suplemento;
+                                nombresOpciones.push(t(opt.nombre));
+                            }
+                        });
+                    });
+                }
+
+                itemsParaAgregar.push({
+                    producto: { id: prod.id, nombre: prod.nombre, precio: prod.precio },
+                    nombre: prod.nombre,
+                    precioFinal: prod.precio + precioExtra,
+                    extrasAplicados: opcionesAplicadas,
+                    nota: item.notes || "",
+                    enviado: false
+                });
+
+                let label = t(prod.nombre);
+                if (nombresOpciones.length > 0) label += ` (${nombresOpciones.join(", ")})`;
+                if (item.notes) label += ` [${item.notes}]`;
+                labelsConfirmacion.push(label);
+            }
+
+            setEstadoVoz(null);
+
+            if (itemsParaAgregar.length > 0) {
+                const itemsListStr = labelsConfirmacion.map(l => `• ${l}`).join("\n");
+                const mensajeConfirm = t('Confirm_voz_pedido_multiple', { items: itemsListStr });
+
+                if (await showConfirm(mensajeConfirm, t('Pedido_por_voz'))) {
+                    setCarrito(prev => [...prev, ...itemsParaAgregar]);
+                    showAlert(t('Exito_voz'), 'success');
+                    setSeccionActiva('pedido');
+                }
+            } else {
+                setEstadoVoz('error');
+                setMensajeVoz(t('Error_voz_no_entiendo'));
+                setTimeout(() => setEstadoVoz(null), 3000);
+            }
+        } catch (err) {
+            console.error("Error en analizarPedidoVoz en barra:", err);
+            setEstadoVoz('error');
+            setMensajeVoz(t('Algo_salio_mal'));
+            setTimeout(() => setEstadoVoz(null), 3000);
         }
     };
 

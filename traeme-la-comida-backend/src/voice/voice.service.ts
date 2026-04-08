@@ -131,6 +131,59 @@ export class VoiceService {
     }
   }
 
+  async parseOrder(transcript: string, menuContext: any): Promise<any> {
+    if (!this.groqApiKey) {
+      throw new Error('GROQ_API_KEY not configured');
+    }
+
+    const prompt = `
+      Actúa como un sistema de procesamiento de pedidos para un restaurante.
+      Analiza la siguiente transcripción de un pedido por voz y conviértela en un JSON estructurado.
+
+      CONTEXTO DEL MENÚ (Productos y Opciones disponibles):
+      ${JSON.stringify(menuContext)}
+
+      TRANSCRIPCIÓN DEL CLIENTE:
+      "${transcript}"
+
+      REGLAS DE PROCESAMIENTO:
+      1. Identifica todos los productos mencionados.
+      2. Para cada producto, usa exactamente el 'id' del CONTEXTO DEL MENÚ.
+      3. Identifica las opciones/extras seleccionados y usa sus 'id' correspondientes.
+      4. Cualquier instrucción adicional (p. ej. "sin cebolla", "leche fría", "muy hecho") debe ir en el campo "notes".
+      5. IMPORTANTE: Traduce siempre el campo "notes" al ESPAÑOL, independientemente del idioma original del cliente.
+      6. Si la transcripción está en otro idioma (inglés, francés, alemán), identifica los productos equivalentes en el menú.
+      7. Devuelve ÚNICAMENTE un objeto JSON con la clave "items", que es un array de objetos.
+      8. Formato de cada item: { "productId": número, "optionIds": [números], "notes": "string en español" }
+
+      Responde SOLO con el JSON, sin texto adicional.
+    `;
+
+    try {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.groqApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0,
+          response_format: { type: 'json_object' }
+        }),
+      });
+
+      if (!response.ok) throw new Error('Groq Order Parsing failed');
+      const data = await response.json();
+      const result = JSON.parse(data.choices[0].message.content);
+      return result.items || [];
+    } catch (error) {
+      this.logger.error('Error in parseOrder:', error);
+      throw error;
+    }
+  }
+
   async addTranslationsToFile(key: string, translations: { es: string, en: string, fr: string, de: string }): Promise<void> {
     return this.addBatchTranslationsToFile([{ key, translations }]);
   }

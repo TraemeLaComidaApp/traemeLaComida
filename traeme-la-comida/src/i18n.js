@@ -128,7 +128,10 @@ const resources = {
       "Error_id_barra": "No se ha podido identificar el ID de la barra en el sistema. Asegúrate de tener al menos una creada en el MapaEditor.",
       "Algo_salio_mal": "Uy. Algo salió mal creando tú pedido.",
       "Buscar_platos": "Buscar platos...",
-      "No_resultados_busqueda": "No hemos encontrado platos que coincidan"
+      "No_resultados_busqueda": "No hemos encontrado platos que coincidan",
+      "Confirm_voz_pedido_multiple": "¿Añadimos esto a tu pedido?\n\n{{items}}",
+      "Error_voz_no_entiendo": "Mmm... no he podido reconocer ningún producto. ¿Podrías repetirlo?",
+      "Procesando_pedido": "Analizando pedido con IA..."
     }
   },
   en: {
@@ -256,7 +259,10 @@ const resources = {
       "Error_id_barra": "Could not identify the bar ID. Ensure you have at least one created in the Map Editor.",
       "Algo_salio_mal": "Oops. Something went wrong creating your order.",
       "Buscar_platos": "Search dishes...",
-      "No_resultados_busqueda": "We couldn't find any matching dishes"
+      "No_resultados_busqueda": "We couldn't find any matching dishes",
+      "Confirm_voz_pedido_multiple": "Add these to your order?\n\n{{items}}",
+      "Error_voz_no_entiendo": "Mmm... I couldn't recognize any products. Could you repeat that?",
+      "Procesando_pedido": "Analyzing order with AI..."
     }
   },
   fr: {
