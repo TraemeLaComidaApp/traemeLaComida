@@ -1,4 +1,5 @@
 import { fetchApi } from './apiClient';
+import { getDeviceId } from '../utils/deviceId';
 
 /**
  * Resolve a mesa by its UUID. Used so the client view can identify
@@ -13,8 +14,11 @@ export const submitOrder = async (mesaId, esBarra, numeroPedidoBarra, carrito, c
 
     if (mesaId) {
         const pedidos = await fetchApi('/pedido') || [];
+        const deviceId = getDeviceId();
         // Consider an active order if it's not closed
-        const pedidoActivo = pedidos.find(p => p.id_mesa === mesaId && p.estado !== 'cerrado');
+        const pedidoActivo = esBarra 
+            ? pedidos.find(p => p.id_mesa === mesaId && p.estado !== 'cerrado' && p.device_id === deviceId)
+            : pedidos.find(p => p.id_mesa === mesaId && p.estado !== 'cerrado');
 
         if (pedidoActivo) {
             currentPedidoId = pedidoActivo.id;
@@ -22,6 +26,7 @@ export const submitOrder = async (mesaId, esBarra, numeroPedidoBarra, carrito, c
             const pedidoPayload = {
                 id_mesa: mesaId,
                 es_barra: esBarra || false,
+                device_id: deviceId,
                 estado: 'recibido',
                 creado_at: new Date().toISOString()
             };
@@ -37,6 +42,7 @@ export const submitOrder = async (mesaId, esBarra, numeroPedidoBarra, carrito, c
         const pedidoPayload = {
             id_mesa: null, // this will fail backend validation if not handled, but keeping structure
             es_barra: esBarra || false,
+            device_id: getDeviceId(),
             estado: 'recibido',
             creado_at: new Date().toISOString()
         };
@@ -88,8 +94,12 @@ export const submitOrder = async (mesaId, esBarra, numeroPedidoBarra, carrito, c
 /**
  * Get active pedido for a mesa
  */
-export const getPedidoActivo = async (mesaId) => {
+export const getPedidoActivo = async (mesaId, esBarra = false) => {
     const pedidos = await fetchApi('/pedido') || [];
+    if (esBarra) {
+        const deviceId = getDeviceId();
+        return pedidos.find(p => p.id_mesa === mesaId && p.estado !== 'cerrado' && p.device_id === deviceId);
+    }
     return pedidos.find(p => p.id_mesa === mesaId && p.estado !== 'cerrado');
 };
 

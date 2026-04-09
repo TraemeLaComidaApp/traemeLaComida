@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './VistaBarra.css';
 import { getMenuCliente } from '../services/apiMenuManager';
 import {
@@ -30,7 +30,13 @@ const VistaBarra = () => {
     const { showAlert, showConfirm, ModalComponent } = useCustomModal();
     const [seccionActiva, setSeccionActiva] = useState('menu');
     const [filtroActivo, setFiltroActivo] = useState('Todo');
-    const [carrito, setCarrito] = useState([]);
+    const [carrito, setCarrito] = useState(() => {
+        try {
+            const saved = sessionStorage.getItem('traeme_carrito_barra');
+            if (saved) return JSON.parse(saved);
+        } catch (e) {}
+        return [];
+    });
     const [metodoPagoMesa, setMetodoPagoMesa] = useState('cash');
     const [pagoSolicitado, setPagoSolicitado] = useState(false);
     const [esperandoCobro, setEsperandoCobro] = useState(false);
@@ -51,6 +57,19 @@ const VistaBarra = () => {
     const [cargandoMenu, setCargandoMenu] = useState(true);
 
     const [configNegocio, setConfigNegocio] = useState({ nombre_local: 'Cargando...', logo_url: null });
+
+    const carritoRef = useRef(carrito);
+    useEffect(() => {
+        carritoRef.current = carrito;
+        try {
+            const localItems = carrito.filter(c => !c.enviado);
+            if (localItems.length > 0) {
+                sessionStorage.setItem('traeme_carrito_barra', JSON.stringify(localItems));
+            } else {
+                sessionStorage.removeItem('traeme_carrito_barra');
+            }
+        } catch(e) {}
+    }, [carrito]);
 
     useEffect(() => {
         let resolveInterval;
@@ -117,7 +136,7 @@ const VistaBarra = () => {
 
         const hydrateAndPollBarra = async () => {
             try {
-                const pedido = await getPedidoActivo(idMesaBarra);
+                const pedido = await getPedidoActivo(idMesaBarra, true);
 
                 // Si el pedido no existe, verificamos si tenemos cosas enviadas pendientes
                 if (!pedido) {
@@ -156,36 +175,51 @@ const VistaBarra = () => {
                             estadoPago: (det.estado === 'pagado' || det.estado === 'listo' || det.estado === 'preparando' || det.estado === 'servido') ? 'pagado' : (det.estado === 'solicitado_mesa' ? 'solicitado_mesa' : null),
                             estado: det.estado
                         }));
-                    // MERGE LOGIC: Keep local items (not sent) and replace sent items with fresh DB state
-                    setCarrito(prev => {
-                        const localItems = prev.filter(item => !item.enviado);
-                        const merged = [...localItems, ...newCarrito];
+                    // Recover ticket number from the active order (notes)
+                    const ticketMatch = detalles.find(d => d.notas?.includes('[Ticket #'))?.notas.match(/\[Ticket #(\d+)\]/);
+                    if (ticketMatch) {
+                        setNumeroPedido(parseInt(ticketMatch[1]));
+                    }
 
-                        // AUTO-CLOSE & RESET: Si ya no quedan items por servir, y todo lo enviado está pagado
-                        const hasUnpaid = detalles.some(det => det.estado !== 'pagado' && det.estado !== 'listo' && det.estado !== 'preparando' && det.estado !== 'servido');
-                        const allServed = detalles.every(det => det.estado === 'servido');
+                    const localItems = carritoRef.current.filter(item => !item.enviado);
+                    const merged = [...localItems, ...newCarrito];
 
-                        if (detalles.length > 0 && allServed && !hasUnpaid && localItems.length === 0) {
-                             // Cerramos el pedido automáticamente para limpiar la mesa para el siguiente cliente
-                             finalizarPedido(pedido.id, null).catch(console.error);
-                             setPagoSolicitado(false);
-                             setEsperandoCobro(false);
-                             // NO quitamos el número de pedido aquí, dejamos que el usuario lo vea hasta que lo borre él
-                             return [];
-                        }
+                    // AUTO-CLOSE & RESET: Si ya no quedan items por servir, y todo lo enviado está pagado
+                    const hasUnpaid = detalles.some(det => det.estado !== 'pagado' && det.estado !== 'listo' && det.estado !== 'preparando' && det.estado !== 'servido');
+                    const allServed = detalles.every(det => det.estado === 'servido');
 
-                        // Si el pedido se cerró externamente, limpiamos
-                        if (pedido.estado === 'cerrado' && merged.length === 0) {
-                            setPagoSolicitado(false);
-                            setEsperandoCobro(false);
-                            setNumeroPedido(null);
-                        }
+                    if (detalles.length > 0 && allServed && !hasUnpaid && localItems.length === 0) {
+                         // Cerramos el pedido automáticamente para limpiar la mesa para el siguiente cliente
+                         finalizarPedido(pedido.id, null).catch(console.error);
+                         setPagoSolicitado(false);
+                         setEsperandoCobro(false);
+                         // NO quitamos el número de pedido aquí, dejamos que el usuario lo vea hasta que lo borre él
+                         setCarrito([]);
+                         return;
+                    }
 
-                        return merged;
-                    });
+                    // Si el pedido se cerró externamente, limpiamos
+                    if (pedido.estado === 'cerrado' && merged.length === 0) {
+                        setPagoSolicitado(false);
+                        setEsperandoCobro(false);
+                        setNumeroPedido(null);
+                        setCarrito([]);
+                        return;
+                    }
 
-                    if (pedido.estado === 'pendiente_cobro' && totalPendientePago > 0) setEsperandoCobro(true);
-                    if (pedido.estado === 'cerrado' && totalPendientePago > 0) setPagoSolicitado(true);
+                    setCarrito(merged);
+
+                    // Reconstruir los banners de pago/espera si se recarga la página
+                    const sentItems = merged.filter(i => i.enviado);
+                    const sentUnpaidCount = sentItems.filter(i => i.estadoPago !== 'pagado').length;
+
+                    if (sentItems.length > 0 && sentUnpaidCount === 0 && localItems.length === 0) {
+                        setPagoSolicitado(true);
+                        setEsperandoCobro(false);
+                    } else if (pedido.estado === 'pendiente_cobro') {
+                        setEsperandoCobro(true);
+                        setPagoSolicitado(false);
+                    }
                 }
             } catch (err) {
                 console.error("Error polling barra status:", err);
@@ -342,7 +376,7 @@ const VistaBarra = () => {
 
                 await submitOrder(idMesaBarra, true, n_pedido_barra, itemsPorEnviar);
 
-                const pedido = await getPedidoActivo(idMesaBarra);
+                const pedido = await getPedidoActivo(idMesaBarra, true);
                 if (pedido) {
                     const detalles = await getDetallesPedido(pedido.id);
                     // Marcamos los detalles recién creados (que no estaban pagados) con el método
@@ -760,7 +794,7 @@ const VistaBarra = () => {
                                         <button className="vb-btn-carrito btn-dark" onClick={async () => {
                                             try {
                                                 // Close the current order for this bar table so the next order gets a fresh ID
-                                                const pedido = await getPedidoActivo(idMesaBarra);
+                                                const pedido = await getPedidoActivo(idMesaBarra, true);
                                                 if (pedido) {
                                                     const { finalizarPedido } = await import('../services/apiCliente');
                                                     await finalizarPedido(pedido.id, null); // don't invalidate mesa UUID for bar

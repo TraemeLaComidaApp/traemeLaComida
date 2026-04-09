@@ -34,7 +34,13 @@ const VistaCliente = () => {
 
     const [seccionActiva, setSeccionActiva] = useState('menu');
     const [filtroActivo, setFiltroActivo] = useState('Todo');
-    const [carrito, setCarrito] = useState([]);
+    const [carrito, setCarrito] = useState(() => {
+        try {
+            const saved = sessionStorage.getItem('traeme_carrito_cliente');
+            if (saved) return JSON.parse(saved);
+        } catch (e) {}
+        return [];
+    });
     const [camareroLlamado, setCamareroLlamado] = useState(false);
     const [metodoPagoMesa, setMetodoPagoMesa] = useState('cash');
 
@@ -57,6 +63,17 @@ const VistaCliente = () => {
     const [busqueda, setBusqueda] = useState("");
 
     const [configNegocio, setConfigNegocio] = useState({ nombre_local: 'Cargando...', logo_url: null });
+
+    useEffect(() => {
+        try {
+            const localItems = carrito.filter(c => !c.enviado);
+            if (localItems.length > 0) {
+                sessionStorage.setItem('traeme_carrito_cliente', JSON.stringify(localItems));
+            } else {
+                sessionStorage.removeItem('traeme_carrito_cliente');
+            }
+        } catch(e) {}
+    }, [carrito]);
 
     useEffect(() => {
         const resolveMesa = async () => {

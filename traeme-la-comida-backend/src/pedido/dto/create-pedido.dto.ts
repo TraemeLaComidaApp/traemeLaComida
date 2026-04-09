@@ -16,6 +16,11 @@ export class CreatePedidoDto {
   @ApiProperty({ required: false, type: () => String })
   @IsOptional()
   @IsString()
+  device_id?: string;
+
+  @ApiProperty({ required: false, type: () => String })
+  @IsOptional()
+  @IsString()
   estado?: string;
 
   @ApiProperty({ required: false, type: () => Date })
