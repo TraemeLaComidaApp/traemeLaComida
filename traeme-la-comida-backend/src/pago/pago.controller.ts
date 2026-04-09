@@ -15,6 +15,15 @@ export class PagoController {
     return this.service.create(createDto);
   }
 
+  @Post('create-payment-intent')
+  @ApiOperation({ summary: 'Create Stripe Payment Intent' })
+  async createPaymentIntent(@Body('monto') monto: number) {
+    if (!monto || monto <= 0) {
+      throw new Error('Monto inválido');
+    }
+    return this.service.createPaymentIntent(monto);
+  }
+
   @Get()
   @ApiOperation({ summary: 'Obtener todos los registros en Pago' })
   findAll() {

@@ -18,6 +18,7 @@ import { useCustomModal } from '../components/useCustomModal';
 import { useTranslation, Trans } from 'react-i18next';
 import LanguageSelector from '../components/LanguageSelector';
 import { voiceService } from '../services/voiceService';
+import { StripePaymentModal } from '../components/StripePaymentModal';
 
 const VistaCliente = () => {
     const { t } = useTranslation();
@@ -57,6 +58,9 @@ const VistaCliente = () => {
     const [itemsSeleccionadosPago, setItemsSeleccionadosPago] = useState([]);
     const [modoSeleccionPago, setModoSeleccionPago] = useState(false);
     const [metodoDivisionActivo, setMetodoDivisionActivo] = useState(null);
+    const [stripeModalOpen, setStripeModalOpen] = useState(false);
+    const [montoStripe, setMontoStripe] = useState(0);
+    const [indicesStripe, setIndicesStripe] = useState([]);
 
     const [estadoVoz, setEstadoVoz] = useState(null);
     const [mensajeVoz, setMensajeVoz] = useState("");
@@ -297,6 +301,7 @@ const VistaCliente = () => {
         if (metodo === 'bizum' || metodo === 'Bizum') metodoEnum = 'Bizum';
         else if (metodo === 'gpay' || metodo === 'GooglePay') metodoEnum = 'GooglePay';
         else if (metodo === 'card' || metodo === 'Tarjeta') metodoEnum = 'Tarjeta';
+        else if (metodo === 'stripe' || metodo === 'Stripe') metodoEnum = 'Stripe';
         else if (metodo === 'mesa') {
             metodoEnum = metodoPagoMesa === 'card' ? 'Tarjeta' : 'Efectivo';
         }
@@ -319,7 +324,7 @@ const VistaCliente = () => {
             return;
         }
 
-        const esDigital = metodoEnum.toLowerCase() === 'bizum' || metodoEnum.toLowerCase().includes('google') || metodoEnum.toLowerCase().includes('gpay');
+        const esDigital = metodoEnum.toLowerCase() === 'bizum' || metodoEnum.toLowerCase().includes('google') || metodoEnum.toLowerCase().includes('gpay') || metodoEnum.toLowerCase() === 'stripe';
         if (!esDigital) {
             ejecutarPagoMesa(indicesPagables, metodoEnum);
         } else {
@@ -362,6 +367,18 @@ const VistaCliente = () => {
 
     const ejecutarPagoDigital = async (indices, metodo) => {
         const monto = indices.reduce((acc, i) => acc + carrito[i].precioFinal, 0);
+
+        if (metodo === 'Stripe' || metodo === 'Tarjeta' || metodo === 'bizum' || metodo === 'Bizum' || metodo === 'gpay' || metodo === 'GooglePay' || metodo === 'Google Pay') {
+             // For any digital method, wrap all in our modern Stripe overlay!
+             setIndicesStripe(indices);
+             setMontoStripe(monto);
+             setStripeModalOpen(true);
+             return;
+        }
+        await procesarPagoDigitalFinal(indices, metodo, monto);
+    };
+
+    const procesarPagoDigitalFinal = async (indices, metodo, monto) => {
         const nuevoCarrito = carrito.map((item, index) => {
             if (indices.includes(index)) {
                 return { ...item, estadoPago: 'pagado' };
@@ -868,17 +885,10 @@ const VistaCliente = () => {
                                                 <span className="material-symbols-outlined icon-orange">payments</span>
                                                 <h3>{t('Pagar_ahora_digital')}</h3>
                                             </div>
-                                            <button className="vc-btn-digital" onClick={() => iniciarPago('bizum')}>
+                                            <button className="vc-btn-digital" onClick={() => iniciarPago('stripe')}>
                                                 <div className="vc-digital-info">
-                                                    <div className="icon-bizum">BIZUM</div>
-                                                    <span>Bizum</span>
-                                                </div>
-                                                <span className="material-symbols-outlined text-muted">chevron_right</span>
-                                            </button>
-                                            <button className="vc-btn-digital" onClick={() => iniciarPago('gpay')}>
-                                                <div className="vc-digital-info">
-                                                    <span className="material-symbols-outlined icon-gpay">google</span>
-                                                    <span>Google Pay</span>
+                                                    <span className="material-symbols-outlined icon-gpay" style={{color: '#6772E5'}}>credit_card</span>
+                                                    <span>Pago Seguro Online (Stripe)</span>
                                                 </div>
                                                 <span className="material-symbols-outlined text-muted">chevron_right</span>
                                             </button>
@@ -1113,7 +1123,7 @@ const VistaCliente = () => {
                                         const m = modalDivisionPago.metodo;
                                         setModalDivisionPago(null);
 
-                                        const esDigital = m.toLowerCase() === 'bizum' || m.toLowerCase().includes('google') || m.toLowerCase().includes('gpay');
+                                        const esDigital = m.toLowerCase() === 'bizum' || m.toLowerCase().includes('google') || m.toLowerCase().includes('gpay') || m.toLowerCase() === 'stripe' || m.toLowerCase() === 'tarjeta';
                                         if (!esDigital) await ejecutarPagoMesa(indices, m);
                                         else await ejecutarPagoDigital(indices, m);
                                     }}
@@ -1155,6 +1165,20 @@ const VistaCliente = () => {
                     </div>
                 </>
             )}
+
+            <StripePaymentModal 
+                isOpen={stripeModalOpen} 
+                monto={montoStripe} 
+                onCancel={() => {
+                    setStripeModalOpen(false);
+                    setItemsSeleccionadosPago([]);
+                    setModoSeleccionPago(false);
+                }}
+                onSuccess={() => {
+                    setStripeModalOpen(false);
+                    procesarPagoDigitalFinal(indicesStripe, 'Tarjeta', montoStripe);
+                }}
+            />
 
             <ModalComponent />
         </div>

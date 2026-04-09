@@ -18,6 +18,7 @@ import { useCustomModal } from '../components/useCustomModal';
 import { useTranslation, Trans } from 'react-i18next';
 import LanguageSelector from '../components/LanguageSelector';
 import { voiceService } from '../services/voiceService';
+import { StripePaymentModal } from '../components/StripePaymentModal';
 
 const VistaBarra = () => {
     const { t } = useTranslation();
@@ -41,6 +42,7 @@ const VistaBarra = () => {
     const [pagoSolicitado, setPagoSolicitado] = useState(false);
     const [esperandoCobro, setEsperandoCobro] = useState(false);
     const [numeroPedido, setNumeroPedido] = useState(null);
+    const [stripeModalOpen, setStripeModalOpen] = useState(false);
 
     const { uuid } = useParams();
     const [idMesaBarra, setIdMesaBarra] = useState(null);
@@ -324,33 +326,34 @@ const VistaBarra = () => {
         setCarrito(carrito.filter((_, index) => index !== indexAEliminar));
     };
 
-    const gestionarPago = async (metodo) => {
+    const gestionarPago = async (metodo, skipConfirm = false) => {
         const itemsToPay = carrito.filter(item => item.estadoPago !== 'pagado');
         if (itemsToPay.length === 0) return;
 
         const itemsPorEnviar = itemsToPay.filter(item => !item.enviado);
-        if (itemsPorEnviar.length === 0) return;
+        if (itemsPorEnviar.length === 0 && !skipConfirm) return;
 
         // Mapeo a strings específicas del Enum de la Base de Datos
         let metodoEnum = 'Efectivo';
         if (metodo === 'bizum' || metodo === 'Bizum') metodoEnum = 'Bizum';
         else if (metodo === 'gpay' || metodo === 'GooglePay') metodoEnum = 'GooglePay';
         else if (metodo === 'card' || metodo === 'Tarjeta') metodoEnum = 'Tarjeta';
+        else if (metodo === 'Stripe') metodoEnum = 'Tarjeta';
         else if (metodo === 'barra') {
             metodoEnum = metodoPagoMesa === 'card' ? 'Tarjeta' : 'Efectivo';
         }
 
-        const esDigital = metodoEnum === 'Bizum' || metodoEnum === 'GooglePay';
+        const esDigital = metodoEnum === 'Bizum' || metodoEnum === 'GooglePay' || metodo === 'Stripe';
         const metodoTranslated = metodoEnum === 'Efectivo' ? String(t('efectivo')).toLowerCase() : 
                                  metodoEnum === 'Tarjeta' ? String(t('tarjeta')).toLowerCase() : metodoEnum;
         
-            const totalItems = itemsToPay.reduce((acc, i) => acc + i.precioFinal, 0).toFixed(2);
-            const mensaje = esDigital
-                ? t('Confirm_pago_digital_barra', {metodo: metodoEnum, total: totalItems})
-                : t('Confirm_pago_fisico_barra', {metodo: metodoTranslated, total: totalItems});
+        const totalItems = itemsToPay.reduce((acc, i) => acc + i.precioFinal, 0).toFixed(2);
+        const mensaje = esDigital
+            ? t('Confirm_pago_digital_barra', {metodo: metodoEnum, total: totalItems})
+            : t('Confirm_pago_fisico_barra', {metodo: metodoTranslated, total: totalItems});
 
-        if (await showConfirm(mensaje)) {
-            if (itemsPorEnviar.length === 0) return;
+        if (skipConfirm || await showConfirm(mensaje)) {
+            if (itemsPorEnviar.length === 0 && !skipConfirm) return;
 
             // Cálculo del número de pedido: Secuencial por día
             let n_pedido_barra = 1;
@@ -744,17 +747,10 @@ const VistaBarra = () => {
                                                 <span className="material-symbols-outlined icon-orange">payments</span>
                                                 <h3>{t('Pagar_ahora_digital')}</h3>
                                             </div>
-                                            <button className="vb-btn-digital" onClick={() => gestionarPago('bizum')}>
+                                            <button className="vb-btn-digital" onClick={() => setStripeModalOpen(true)}>
                                                 <div className="vb-digital-info">
-                                                    <div className="icon-bizum">BIZUM</div>
-                                                    <span>Bizum</span>
-                                                </div>
-                                                <span className="material-symbols-outlined text-muted">chevron_right</span>
-                                            </button>
-                                            <button className="vb-btn-digital" onClick={() => gestionarPago('gpay')}>
-                                                <div className="vb-digital-info">
-                                                    <span className="material-symbols-outlined icon-gpay">google</span>
-                                                    <span>Google Pay</span>
+                                                    <span className="material-symbols-outlined icon-gpay" style={{color: '#6772E5'}}>credit_card</span>
+                                                    <span>Pago Seguro (Apple/Google Pay, Tarjeta)</span>
                                                 </div>
                                                 <span className="material-symbols-outlined text-muted">chevron_right</span>
                                             </button>

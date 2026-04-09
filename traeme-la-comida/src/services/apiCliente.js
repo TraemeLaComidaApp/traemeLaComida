@@ -190,3 +190,13 @@ export const llamarCamarero = async (mesaId) => {
         method: 'POST'
     });
 };
+
+/**
+ * Call the backend to create a Stripe PaymentIntent
+ */
+export const createPaymentIntent = async (monto) => {
+    return await fetchApi('/pago/create-payment-intent', {
+        method: 'POST',
+        body: JSON.stringify({ monto }),
+    });
+};

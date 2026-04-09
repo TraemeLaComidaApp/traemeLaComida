@@ -1,0 +1,89 @@
+.spm-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    padding: 20px;
+}
+
+.spm-container {
+    background: white;
+    padding: 25px;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+}
+
+.spm-container h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    text-align: center;
+    color: #333;
+}
+
+.spm-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 0;
+}
+
+.spm-icon-spin {
+    animation: spm-spin 1s linear infinite;
+    font-size: 30px;
+    color: #f39c12;
+}
+
+@keyframes spm-spin {
+    100% { transform: rotate(360deg); }
+}
+
+.spm-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.spm-error {
+    color: #e74c3c;
+    font-size: 14px;
+    text-align: center;
+}
+
+.spm-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.spm-btn-cancelar {
+    flex: 1;
+    padding: 12px;
+    background: #e0e0e0;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    color: #333;
+    cursor: pointer;
+}
+
+.spm-btn-pagar {
+    flex: 2;
+    padding: 12px;
+    background: #f39c12;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    color: white;
+    cursor: pointer;
+}
+
+.spm-btn-pagar:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
