@@ -23,7 +23,7 @@ const CheckoutForm = ({ monto, onSuccess, onCancel }) => {
         const { error, paymentIntent } = await stripe.confirmPayment({
             elements,
             confirmParams: {
-                // Return URL not needed here, we do redirect local if_required
+                return_url: window.location.href, // Required for Bizum and 3DS cards
             },
             redirect: 'if_required' 
         });

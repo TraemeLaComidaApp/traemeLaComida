@@ -118,6 +118,43 @@ const VistaCliente = () => {
         return () => clearInterval(menuInterval);
     }, []);
 
+    // STRIPE REDIRECT HANDLER
+    useEffect(() => {
+        if (!mesa || !mesa.id) return;
+        const urlParams = new URLSearchParams(window.location.search);
+        const redirectStatus = urlParams.get('redirect_status');
+
+        if (redirectStatus === 'succeeded') {
+            const processRedirectPayment = async () => {
+                try {
+                    const pedido = await getPedidoActivo(mesa.id);
+                    if (pedido) {
+                        const detalles = await getDetallesPedido(pedido.id);
+                        let amount = 0;
+                        for (const det of detalles) {
+                            if (det.estado !== 'pagado' && det.estado !== 'servido') {
+                                amount += det.precio_unitario + (det.seleccionesOpciones?.reduce((acc, opt) => acc + opt.precio_extra_aplicado, 0) || 0);
+                                await actualizarEstadoDetalle(det.id, 'pagado', 'Digital');
+                            }
+                        }
+                        if (amount > 0) {
+                            await registrarPago(pedido.id, amount, 'Digital');
+                        }
+                        // Check if all are paid now to finalize the order
+                        const updatedDetalles = await getDetallesPedido(pedido.id);
+                        if (updatedDetalles.every(d => d.estado === 'pagado')) {
+                            await finalizarPedido(pedido.id, mesa.id);
+                        }
+                    }
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                } catch (e) {
+                    console.error("Error processing Stripe redirect:", e);
+                }
+            };
+            processRedirectPayment();
+        }
+    }, [mesa]);
+
     // HYDRATION & POLLING: FETCH ACTIVE ORDER AND MONITOR STATUS
     useEffect(() => {
         if (!mesa || !mesa.id) return;
@@ -325,6 +362,9 @@ const VistaCliente = () => {
         }
 
         const esDigital = metodoEnum.toLowerCase() === 'bizum' || metodoEnum.toLowerCase().includes('google') || metodoEnum.toLowerCase().includes('gpay') || metodoEnum.toLowerCase() === 'stripe';
+        
+        if (esDigital) metodoEnum = 'Digital';
+
         if (!esDigital) {
             ejecutarPagoMesa(indicesPagables, metodoEnum);
         } else {
@@ -1176,7 +1216,7 @@ const VistaCliente = () => {
                 }}
                 onSuccess={() => {
                     setStripeModalOpen(false);
-                    procesarPagoDigitalFinal(indicesStripe, 'Tarjeta', montoStripe);
+                    procesarPagoDigitalFinal(indicesStripe, 'Digital', montoStripe);
                 }}
             />
 

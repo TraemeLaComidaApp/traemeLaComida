@@ -132,6 +132,39 @@ const VistaBarra = () => {
         };
     }, []);
 
+    // STRIPE REDIRECT HANDLER
+    useEffect(() => {
+        if (!idMesaBarra) return;
+        const urlParams = new URLSearchParams(window.location.search);
+        const redirectStatus = urlParams.get('redirect_status');
+
+        if (redirectStatus === 'succeeded') {
+            const processRedirectPayment = async () => {
+                try {
+                    const pedido = await getPedidoActivo(idMesaBarra, true);
+                    if (pedido) {
+                        const detalles = await getDetallesPedido(pedido.id);
+                        let amount = 0;
+                        for (const det of detalles) {
+                            if (det.estado !== 'pagado' && det.estado !== 'servido') {
+                                amount += det.precio_unitario + (det.seleccionesOpciones?.reduce((acc, opt) => acc + opt.precio_extra_aplicado, 0) || 0);
+                                await actualizarEstadoDetalle(det.id, 'pagado', 'Digital');
+                            }
+                        }
+                        if (amount > 0) {
+                            await registrarPago(pedido.id, amount, 'Digital');
+                        }
+                    }
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    setPagoSolicitado(true);
+                } catch (e) {
+                    console.error("Error processing Stripe redirect:", e);
+                }
+            };
+            processRedirectPayment();
+        }
+    }, [idMesaBarra]);
+
     // HYDRATION & POLLING FOR BARRA
     useEffect(() => {
         if (!idMesaBarra) return;
@@ -335,15 +368,15 @@ const VistaBarra = () => {
 
         // Mapeo a strings específicas del Enum de la Base de Datos
         let metodoEnum = 'Efectivo';
-        if (metodo === 'bizum' || metodo === 'Bizum') metodoEnum = 'Bizum';
-        else if (metodo === 'gpay' || metodo === 'GooglePay') metodoEnum = 'GooglePay';
-        else if (metodo === 'card' || metodo === 'Tarjeta') metodoEnum = 'Tarjeta';
-        else if (metodo === 'Stripe') metodoEnum = 'Tarjeta';
-        else if (metodo === 'barra') {
+        if (metodo === 'bizum' || metodo === 'Bizum' || metodo === 'gpay' || metodo === 'GooglePay' || metodo === 'Stripe') {
+            metodoEnum = 'Digital';
+        } else if (metodo === 'card' || metodo === 'Tarjeta') {
+            metodoEnum = 'Tarjeta';
+        } else if (metodo === 'barra') {
             metodoEnum = metodoPagoMesa === 'card' ? 'Tarjeta' : 'Efectivo';
         }
 
-        const esDigital = metodoEnum === 'Bizum' || metodoEnum === 'GooglePay' || metodo === 'Stripe';
+        const esDigital = metodoEnum === 'Digital';
         const metodoTranslated = metodoEnum === 'Efectivo' ? String(t('efectivo')).toLowerCase() : 
                                  metodoEnum === 'Tarjeta' ? String(t('tarjeta')).toLowerCase() : metodoEnum;
         
@@ -969,6 +1002,17 @@ const VistaBarra = () => {
                     </div>
                 </div>
             )}
+            
+            <StripePaymentModal 
+                isOpen={stripeModalOpen} 
+                monto={totalPendientePago} 
+                onCancel={() => setStripeModalOpen(false)}
+                onSuccess={() => {
+                    setStripeModalOpen(false);
+                    gestionarPago('Stripe', true);
+                }}
+            />
+
             <ModalComponent />
         </div>
     );
