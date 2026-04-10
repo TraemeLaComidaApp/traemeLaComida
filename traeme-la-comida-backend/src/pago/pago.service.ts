@@ -10,8 +10,8 @@ export class PagoService {
   private stripe: any;
 
   constructor(private readonly supabaseService: SupabaseService) {
-      // Initialize Stripe, bypass strict apiVersion typing
-      this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_51TKFrkASdC4IwfpKTzLCzvvNTAl6JNg0DLJtzhj8tBhh1LXwZkb55pI7BMAW4cJTtxvBaAH0YgPS8rsB7GIawPQR00T7Ux5Gaw');
+    // Initialize Stripe, bypass strict apiVersion typing
+    this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
   }
 
   async createPaymentIntent(monto: number) {
