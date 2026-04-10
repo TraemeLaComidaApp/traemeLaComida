@@ -408,7 +408,7 @@ const VistaCliente = () => {
     const ejecutarPagoDigital = async (indices, metodo) => {
         const monto = indices.reduce((acc, i) => acc + carrito[i].precioFinal, 0);
 
-        if (metodo === 'Stripe' || metodo === 'Tarjeta' || metodo === 'bizum' || metodo === 'Bizum' || metodo === 'gpay' || metodo === 'GooglePay' || metodo === 'Google Pay') {
+        if (metodo === 'Digital' || metodo === 'Stripe' || metodo.toLowerCase() === 'bizum' || metodo.toLowerCase().includes('gpay') || metodo.toLowerCase().includes('google')) {
              // For any digital method, wrap all in our modern Stripe overlay!
              setIndicesStripe(indices);
              setMontoStripe(monto);
@@ -1160,10 +1160,13 @@ const VistaCliente = () => {
                                             .filter(({ item }) => item.enviado && !item.estadoPago)
                                             .map(({ index }) => index);
 
-                                        const m = modalDivisionPago.metodo;
+                                        let m = modalDivisionPago.metodo;
                                         setModalDivisionPago(null);
 
-                                        const esDigital = m.toLowerCase() === 'bizum' || m.toLowerCase().includes('google') || m.toLowerCase().includes('gpay') || m.toLowerCase() === 'stripe' || m.toLowerCase() === 'tarjeta';
+                                        const esDigital = m === 'Digital' || m.toLowerCase() === 'bizum' || m.toLowerCase().includes('google') || m.toLowerCase().includes('gpay') || m.toLowerCase() === 'stripe';
+                                        
+                                        if (esDigital) m = 'Digital';
+
                                         if (!esDigital) await ejecutarPagoMesa(indices, m);
                                         else await ejecutarPagoDigital(indices, m);
                                     }}
